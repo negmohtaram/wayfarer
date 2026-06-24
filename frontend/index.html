@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WAYFARER — AI Travel Planning</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --navy: #0a0e1a;
+    --navy-2: #0f1525;
+    --navy-3: #151d35;
+    --navy-4: #1c2545;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dim: #7a6530;
+    --text: #e8eaf0;
+    --text-dim: #8892b0;
+    --text-muted: #4a5568;
+    --border: #1e2d4a;
+    --border-bright: #2d4070;
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --day-colors: #c9a84c, #64b5f6, #81c784, #ff8a65, #ba68c8, #4db6ac, #f06292;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    background: var(--navy-2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 1000;
+  }
+  .nav-logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gold);
+  }
+  .nav-tagline {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+  .nav-replan {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .replan-input {
+    background: var(--navy-3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 16px;
+    color: var(--text);
+    font-size: 13px;
+    width: 260px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .replan-input::placeholder { color: var(--text-muted); }
+  .replan-input:focus { border-color: var(--gold-dim); }
+  .btn {
+    padding: 7px 18px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+    color: var(--navy);
+  }
+  .btn-gold:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border-bright);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr 380px;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    background: var(--navy-2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .panel-section {
+    background: var(--navy-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .panel-section h3 {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  /* Destination input */
+  .destination-input {
+    width: 100%;
+    background: var(--navy-4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .destination-input:focus { border-color: var(--gold-dim); }
+  .destination-input::placeholder { color: var(--text-muted); font-style: italic; }
+
+  .city-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .city-pill {
+    padding: 5px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-dim);
+  }
+  .city-pill:hover, .city-pill.active {
+    background: var(--gold-dim);
+    border-color: var(--gold-dim);
+    color: var(--text);
+  }
+
+  .dates-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .date-field label {
+    font-size: 11px;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .date-field input {
+    width: 100%;
+    background: var(--navy-4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+  .date-field input:focus { border-color: var(--gold-dim); }
+
+  /* Quiz */
+  .quiz-container { position: relative; min-height: 200px; }
+  .quiz-card {
+    background: linear-gradient(135deg, var(--navy-3), var(--navy-4));
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius);
+    padding: 18px;
+    transition: all 0.3s ease;
+  }
+  .quiz-progress {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .quiz-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .quiz-dot.active { background: var(--gold); }
+  .quiz-dot.done { background: var(--gold-dim); }
+
+  .quiz-q {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .quiz-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 14px;
+  }
+  .quiz-input {
+    width: 100%;
+    background: var(--navy-4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    min-height: 60px;
+    transition: border-color 0.2s;
+  }
+  .quiz-input:focus { border-color: var(--gold-dim); }
+  .quiz-input::placeholder { color: var(--text-muted); }
+
+  /* Persona card */
+  .persona-card {
+    background: linear-gradient(135deg, #1a2a4a, var(--navy-3));
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius);
+    padding: 18px;
+  }
+  .persona-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+  .persona-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .persona-tag {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    border: 1px solid var(--gold-dim);
+    color: var(--gold-light);
+    background: rgba(201, 168, 76, 0.1);
+  }
+  .persona-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .stat-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .stat-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* ── CENTER PANEL ── */
+  .center-panel {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #map {
+    flex: 1;
+    min-height: 60%;
+    z-index: 1;
+  }
+
+  /* Agent progress overlay */
+  .progress-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 14, 26, 0.92);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .progress-box {
+    background: var(--navy-2);
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    padding: 32px;
+    width: 480px;
+    box-shadow: var(--shadow);
+  }
+  .progress-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 2px;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .progress-subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .progress-log {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .log-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-dim);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeInUp 0.3s ease forwards;
+  }
+  .log-item.active { color: var(--text); }
+  .log-item.done { color: var(--green); }
+  .log-item.warn { color: var(--amber); }
+  .log-icon { width: 18px; text-align: center; flex-shrink: 0; }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Map controls */
+  .map-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .map-control-btn {
+    width: 36px; height: 36px;
+    background: var(--navy-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .map-control-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .map-control-btn.active { background: var(--gold-dim); color: var(--navy); border-color: var(--gold); }
+
+  /* Custom map markers */
+  .day-marker {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    background: var(--navy-2);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .panel-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background: var(--navy-2);
+    z-index: 10;
+  }
+  .panel-header h2 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+  .panel-header .total-cost {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .itinerary-content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Day section */
+  .day-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .day-section:hover { border-color: var(--border-bright); }
+
+  .day-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+  .day-header:hover { background: rgba(255,255,255,0.03); }
+
+  .day-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .day-info { flex: 1; }
+  .day-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .day-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .day-meta-item {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .weather-icon { font-size: 13px; }
+  .chevron { color: var(--text-muted); font-size: 12px; transition: transform 0.2s; }
+  .day-section.open .chevron { transform: rotate(180deg); }
+
+  .day-body {
+    display: none;
+    padding: 0 12px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .day-section.open .day-body { display: block; }
+
+  /* Arc badge */
+  .arc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    margin-top: 10px;
+  }
+  .arc-peak { background: rgba(201,168,76,0.2); color: var(--gold); border: 1px solid var(--gold-dim); }
+  .arc-orientation { background: rgba(100,181,246,0.15); color: #64b5f6; border: 1px solid rgba(100,181,246,0.3); }
+  .arc-deep { background: rgba(129,199,132,0.15); color: #81c784; border: 1px solid rgba(129,199,132,0.3); }
+  .arc-farewell { background: rgba(255,138,101,0.15); color: #ff8a65; border: 1px solid rgba(255,138,101,0.3); }
+  .arc-default { background: rgba(186,104,200,0.15); color: #ba68c8; border: 1px solid rgba(186,104,200,0.3); }
+
+  /* Experience card */
+  .exp-card {
+    background: var(--navy-3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .exp-card:hover { border-color: var(--border-bright); transform: translateX(2px); }
+  .exp-card.expanded { border-color: var(--gold-dim); }
+
+  .exp-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .exp-time {
+    font-size: 11px;
+    color: var(--gold);
+    font-weight: 600;
+    min-width: 42px;
+    padding-top: 2px;
+  }
+  .exp-main { flex: 1; }
+  .exp-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .exp-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+  }
+  .exp-type-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    text-transform: capitalize;
+    font-weight: 500;
+  }
+  .type-food { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .type-cultural { background: rgba(100,181,246,0.15); color: #64b5f6; }
+  .type-scenic { background: rgba(129,199,132,0.15); color: #81c784; }
+  .type-active { background: rgba(255,138,101,0.15); color: #ff8a65; }
+  .type-passive { background: rgba(186,104,200,0.15); color: #ba68c8; }
+  .type-serendipity { background: rgba(77,182,172,0.15); color: #4db6ac; }
+  .type-nightlife { background: rgba(240,98,146,0.15); color: #f06292; }
+
+  .exp-cost {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .exp-duration {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Regret badges */
+  .regret-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .regret-must { background: rgba(248,113,113,0.2); color: #f87171; }
+  .regret-should { background: rgba(251,191,36,0.2); color: #fbbf24; }
+  .regret-nice { background: rgba(74,222,128,0.2); color: #4ade80; }
+
+  /* Expand section */
+  .exp-expanded {
+    display: none;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .exp-card.expanded .exp-expanded { display: block; }
+  .exp-description {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+  .exp-why {
+    font-size: 12px;
+    color: var(--gold-light);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: 8px;
+  }
+  .exp-tips {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    padding: 8px 10px;
+    background: var(--navy-4);
+    border-radius: 6px;
+  }
+
+  /* Travel connector */
+  .travel-connector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0 4px 52px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .travel-line {
+    width: 1px;
+    height: 16px;
+    background: var(--border);
+    margin-left: 20px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+  }
+  .empty-icon { font-size: 48px; opacity: 0.4; }
+  .empty-title { font-size: 16px; color: var(--text-dim); }
+  .empty-sub { font-size: 13px; color: var(--text-muted); max-width: 240px; line-height: 1.6; }
+
+  /* Regret summary bar */
+  .regret-summary {
+    background: var(--navy-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 16px;
+  }
+  .regret-summary h4 {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .regret-tier-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .regret-tier-label { color: var(--text-dim); min-width: 100px; }
+  .regret-names { color: var(--text); line-height: 1.4; }
+
+  /* Map popup */
+  .leaflet-popup-content-wrapper {
+    background: var(--navy-2) !important;
+    border: 1px solid var(--border-bright) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--shadow) !important;
+    color: var(--text) !important;
+  }
+  .leaflet-popup-tip { background: var(--navy-2) !important; }
+  .popup-exp-name { font-weight: 600; color: var(--gold); margin-bottom: 4px; font-size: 13px; }
+  .popup-time { font-size: 11px; color: var(--text-dim); }
+  .popup-desc { font-size: 12px; color: var(--text-dim); margin-top: 6px; max-width: 200px; line-height: 1.5; }
+
+  /* Welcome/start screen */
+  #welcome-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 14, 26, 0.95);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+  }
+  .welcome-box {
+    text-align: center;
+    max-width: 500px;
+    padding: 40px;
+  }
+  .welcome-logo {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    color: var(--gold);
+    margin-bottom: 6px;
+  }
+  .welcome-sub {
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+  .welcome-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    margin-bottom: 32px;
+  }
+  .welcome-start {
+    padding: 14px 40px;
+    font-size: 15px;
+    letter-spacing: 1px;
+  }
+
+  /* Critique panel */
+  .critique-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .critique-label { color: var(--text-dim); }
+  .critique-score { font-weight: 600; }
+  .score-good { color: var(--green); }
+  .score-ok { color: var(--amber); }
+  .score-bad { color: var(--red); }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .main { grid-template-columns: 300px 1fr 340px; }
+  }
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: auto 50vh auto; }
+    body { overflow: auto; }
+  }
+
+  /* Serendipity zone styling for map */
+  .serendipity-zone {
+    stroke: var(--gold);
+    stroke-width: 1;
+    fill: rgba(201,168,76,0.08);
+    stroke-dasharray: 4,4;
+  }
+
+  /* Loading dots */
+  .loading-dots span {
+    animation: blink 1.2s ease infinite;
+    opacity: 0;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100% { opacity: 0; } 40% { opacity: 1; } }
+
+  .narrative-box {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    font-style: italic;
+    padding: 12px;
+    background: var(--navy-4);
+    border-radius: 8px;
+    border-left: 3px solid var(--gold-dim);
+    margin-bottom: 14px;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div>
+    <div class="nav-logo">WAYFARER</div>
+    <div class="nav-tagline">Planned by a local friend who knows you</div>
+  </div>
+  <div class="nav-replan" id="replan-bar" style="opacity:0.4;pointer-events:none;">
+    <input class="replan-input" id="replan-input" placeholder="Something changed? Tell me..." />
+    <button class="btn btn-gold" onclick="submitReplan()">Replan</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- Destination -->
+    <div class="panel-section">
+      <h3>Destination</h3>
+      <input class="destination-input" id="dest-input" placeholder="Where are you going?" value="Amsterdam" />
+      <div class="city-pills">
+        <div class="city-pill active" onclick="selectCity('amsterdam',this)">Amsterdam</div>
+        <div class="city-pill" onclick="selectCity('paris',this)">Paris</div>
+        <div class="city-pill" onclick="selectCity('tokyo',this)">Tokyo</div>
+      </div>
+    </div>
+
+    <!-- Dates -->
+    <div class="panel-section">
+      <h3>Trip Dates</h3>
+      <div class="dates-row">
+        <div class="date-field">
+          <label>Start Date</label>
+          <input type="date" id="start-date" />
+        </div>
+        <div class="date-field">
+          <label>Duration</label>
+          <select id="trip-days" style="width:100%;background:var(--navy-4);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);font-size:13px;outline:none;">
+            <option value="1">1 day</option>
+            <option value="2">2 days</option>
+            <option value="3" selected>3 days</option>
+            <option value="4">4 days</option>
+            <option value="5">5 days</option>
+            <option value="7">7 days</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Persona Quiz -->
+    <div class="panel-section" id="quiz-section">
+      <h3>Traveler Profile</h3>
+      <div id="quiz-container" class="quiz-container">
+        <!-- Will be filled dynamically -->
+        <div style="text-align:center;padding:20px;">
+          <div style="font-size:28px;margin-bottom:8px;">✈️</div>
+          <div style="font-size:13px;color:var(--text-dim);">Build your traveler profile to get a plan made for you</div>
+          <button class="btn btn-gold" style="margin-top:16px;width:100%;" onclick="startQuiz()">Start Profile Quiz</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generate button -->
+    <button class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;letter-spacing:1px;" id="generate-btn" onclick="generatePlan()" disabled>
+      Generate My Itinerary
+    </button>
+
+  </div>
+
+  <!-- CENTER PANEL -->
+  <div class="center-panel">
+    <!-- Welcome overlay -->
+    <div id="welcome-overlay">
+      <div class="welcome-box">
+        <div class="welcome-logo">WAYFARER</div>
+        <div class="welcome-sub">Your brilliant local friend</div>
+        <div class="welcome-desc">
+          This is not a trip recommender. It is a multi-agent system that models you as deeply as it models the destination — generating itineraries that feel like they were planned by someone who knows you personally.
+        </div>
+        <button class="btn btn-gold welcome-start" onclick="dismissWelcome()">Start Planning</button>
+      </div>
+    </div>
+
+    <!-- Agent progress overlay -->
+    <div class="progress-overlay" id="progress-overlay" style="display:none;">
+      <div class="progress-box">
+        <div class="progress-title">PLANNING YOUR TRIP</div>
+        <div class="progress-subtitle">
+          <span id="destination-label">Amsterdam</span> · <span class="loading-dots">Working<span>.</span><span>.</span><span>.</span></span>
+        </div>
+        <ul class="progress-log" id="progress-log"></ul>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Map controls -->
+    <div class="map-controls" id="map-controls" style="display:none;">
+      <div class="map-control-btn" title="Center map" onclick="centerMap()">⌖</div>
+      <div class="map-control-btn" id="toggle-weather" title="Toggle weather" onclick="toggleWeather()">🌤</div>
+      <div class="map-control-btn" id="toggle-route" title="Toggle route animation" onclick="reanimateRoute()">▶</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div class="panel-header">
+      <h2>Itinerary</h2>
+      <div class="total-cost" id="total-cost-display"></div>
+    </div>
+
+    <div id="itinerary-content">
+      <div class="empty-state">
+        <div class="empty-icon">🗺️</div>
+        <div class="empty-title">Your itinerary will appear here</div>
+        <div class="empty-sub">Complete the traveler profile quiz and generate your personalized trip</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  sessionId: null,
+  destination: 'amsterdam',
+  tripDays: 3,
+  startDate: null,
+  conversationHistory: [],
+  questionNumber: 0,
+  persona: null,
+  itinerary: null,
+  map: null,
+  markers: [],
+  routeLines: [],
+  serendipityZones: [],
+  weatherOverlay: false,
+  dayColors: ['#c9a84c','#64b5f6','#81c784','#ff8a65','#ba68c8','#4db6ac','#f06292'],
+  planning: false,
+  personaComplete: false,
+};
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function initMap() {
+  state.map = L.map('map', {
+    center: [52.3676, 4.9041],
+    zoom: 13,
+    zoomControl: false,
+    attributionControl: true,
+  });
+
+  // CartoDB Dark Matter tiles
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '©OpenStreetMap ©CartoDB',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(state.map);
+
+  L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+}
+
+function init() {
+  initMap();
+
+  // Set default date to today
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('start-date').value = today;
+  state.startDate = today;
+
+  document.getElementById('start-date').addEventListener('change', e => {
+    state.startDate = e.target.value;
+  });
+  document.getElementById('trip-days').addEventListener('change', e => {
+    state.tripDays = parseInt(e.target.value);
+  });
+
+  // Generate a session ID
+  state.sessionId = 'wf_' + Math.random().toString(36).substr(2, 9);
+}
+
+// ── Welcome ────────────────────────────────────────────────────────────────
+function dismissWelcome() {
+  document.getElementById('welcome-overlay').style.display = 'none';
+}
+
+// ── City selection ─────────────────────────────────────────────────────────
+function selectCity(city, el) {
+  state.destination = city;
+  document.getElementById('dest-input').value = city.charAt(0).toUpperCase() + city.slice(1);
+
+  document.querySelectorAll('.city-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+
+  // Center map on city
+  const cityCoords = {
+    amsterdam: [52.3676, 4.9041],
+    paris: [48.8566, 2.3522],
+    tokyo: [35.6762, 139.6503],
+  };
+  if (state.map) {
+    state.map.setView(cityCoords[city], 13, { animate: true, duration: 1 });
+  }
+}
+
+// ── Quiz ───────────────────────────────────────────────────────────────────
+function startQuiz() {
+  document.getElementById('quiz-container').innerHTML = buildQuizCard('', 0, '');
+  sendQuizTurn('');
+}
+
+function buildQuizCard(question, qNum, hint) {
+  const dots = Array.from({length: 8}, (_, i) =>
+    `<div class="quiz-dot ${i < qNum - 1 ? 'done' : i === qNum - 1 ? 'active' : ''}"></div>`
+  ).join('');
+
+  return `
+    <div class="quiz-card">
+      <div class="quiz-progress">${dots}</div>
+      <div class="quiz-q" id="quiz-question">${question || 'Starting your profile...'}</div>
+      ${hint ? `<div class="quiz-hint">${hint}</div>` : ''}
+      <textarea class="quiz-input" id="quiz-answer" placeholder="Your answer..." rows="2"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn btn-gold" style="flex:1;" onclick="submitQuizAnswer()">Continue →</button>
+      </div>
+    </div>
+  `;
+}
+
+async function sendQuizTurn(userMessage) {
+  const dest = state.destination;
+  const days = state.tripDays;
+
+  showQuizLoading();
+
+  try {
+    const res = await fetch('/api/persona/turn', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        destination: dest,
+        trip_days: days,
+        conversation_history: state.conversationHistory,
+        user_message: userMessage,
+        session_id: state.sessionId,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.complete) {
+      state.persona = data.persona;
+      state.personaComplete = true;
+      state.persona.trip_start_date = state.startDate;
+      showPersonaCard(data.persona, data.persona_tags, data.persona_narrative);
+      document.getElementById('generate-btn').disabled = false;
+    } else {
+      // Update conversation history
+      if (userMessage) {
+        state.conversationHistory.push({role: 'user', content: userMessage});
+      }
+      state.conversationHistory.push({role: 'assistant', content: data.question});
+
+      document.getElementById('quiz-container').innerHTML = buildQuizCard(
+        data.question, data.question_number, data.hint
+      );
+
+      // Auto-focus
+      setTimeout(() => {
+        const el = document.getElementById('quiz-answer');
+        if (el) el.focus();
+      }, 100);
+    }
+  } catch(e) {
+    document.getElementById('quiz-container').innerHTML = `
+      <div style="color:var(--red);font-size:13px;padding:12px;">
+        Error connecting to server. Make sure the backend is running.
+      </div>
+      <button class="btn btn-ghost" style="margin-top:8px;" onclick="startQuiz()">Retry</button>
+    `;
+  }
+}
+
+function showQuizLoading() {
+  document.getElementById('quiz-container').innerHTML = `
+    <div style="text-align:center;padding:24px;">
+      <div class="spinner" style="width:24px;height:24px;margin:0 auto 12px;"></div>
+      <div style="font-size:13px;color:var(--text-dim);">Thinking about your profile<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></div>
+    </div>
+  `;
+}
+
+function submitQuizAnswer() {
+  const answer = document.getElementById('quiz-answer')?.value?.trim() || '';
+  sendQuizTurn(answer);
+}
+
+// Allow Enter key in quiz
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement?.id === 'quiz-answer') {
+    e.preventDefault();
+    submitQuizAnswer();
+  }
+});
+
+function showPersonaCard(persona, tags, narrative) {
+  const statsHtml = [
+    ['Pace', persona.pace],
+    ['Food', persona.food_importance],
+    ['Culture', persona.culture_importance],
+    ['Local Feel', persona.local_vs_tourist],
+    ['Nature', persona.nature_importance],
+    ['Walking', persona.walking_tolerance],
+  ].map(([label, val]) => `
+    <div class="stat-row">
+      <span class="stat-label">${label}</span>
+      <div class="stat-bar"><div class="stat-fill" style="width:${val * 10}%"></div></div>
+    </div>
+  `).join('');
+
+  const tagsHtml = (tags || []).map(t => `<span class="persona-tag">${t}</span>`).join('');
+
+  const socialIcons = {solo:'🎒', couple:'💑', family:'👨‍👩‍👧', friends:'👥'};
+  const icon = socialIcons[persona.social_context] || '✈️';
+
+  document.getElementById('quiz-container').innerHTML = `
+    <div class="persona-card">
+      <div class="persona-name">${icon} ${capitalize(persona.social_context)} Explorer · ${capitalize(persona.energy_profile.replace('_', ' '))}</div>
+      ${narrative ? `<div class="narrative-box">${narrative}</div>` : ''}
+      <div class="persona-tags">${tagsHtml}</div>
+      <div class="persona-stats">${statsHtml}</div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text-muted);">
+        Budget: €${persona.budget_per_day}/day · ${persona.trip_days} days · ${capitalize(persona.destination)}
+        ${persona.physical_constraints?.length ? ' · ⚠️ ' + persona.physical_constraints.join(', ') : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ── Planning ───────────────────────────────────────────────────────────────
+async function generatePlan() {
+  if (state.planning || !state.persona) return;
+  state.planning = true;
+
+  // Update persona with current settings
+  state.persona.destination = state.destination;
+  state.persona.trip_days = state.tripDays;
+  state.persona.trip_start_date = state.startDate;
+
+  document.getElementById('progress-overlay').style.display = 'flex';
+  document.getElementById('destination-label').textContent = capitalize(state.destination);
+  document.getElementById('progress-log').innerHTML = '';
+  document.getElementById('map-controls').style.display = 'none';
+  clearMap();
+
+  addLogItem('🧠 Building traveler profile...', 'done');
+
+  try {
+    const response = await fetch('/api/plan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        session_id: state.sessionId,
+        persona: state.persona,
+        stream: true,
+      }),
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const chunk of lines) {
+        if (!chunk.trim()) continue;
+        const eventMatch = chunk.match(/^event: (\w+)\ndata: (.+)$/s);
+        if (!eventMatch) continue;
+
+        const [, event, dataStr] = eventMatch;
+        try {
+          const data = JSON.parse(dataStr);
+          handleSSEEvent(event, data);
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    addLogItem('❌ Error: ' + e.message, 'warn');
+  }
+
+  state.planning = false;
+}
+
+function handleSSEEvent(event, data) {
+  switch(event) {
+    case 'progress':
+      addLogItem(data.message, 'done');
+      break;
+    case 'critique':
+      handleCritique(data);
+      break;
+    case 'complete':
+      state.itinerary = data.itinerary;
+      addLogItem('✅ Plan complete! Loading your itinerary...', 'done');
+      setTimeout(() => {
+        document.getElementById('progress-overlay').style.display = 'none';
+        document.getElementById('map-controls').style.display = 'flex';
+        document.getElementById('replan-bar').style.opacity = '1';
+        document.getElementById('replan-bar').style.pointerEvents = 'auto';
+        renderItinerary(state.itinerary);
+        renderMap(state.itinerary);
+      }, 800);
+      break;
+    case 'error':
+      addLogItem('❌ ' + data.message, 'warn');
+      state.planning = false;
+      setTimeout(() => {
+        document.getElementById('progress-overlay').style.display = 'none';
+      }, 2000);
+      break;
+    case 'done':
+      break;
+  }
+}
+
+function handleCritique(data) {
+  const status = data.verdict === 'approve' ? '✓' : '⚠';
+  const cls = data.verdict === 'approve' ? 'done' : 'warn';
+  addLogItem(`   └─ ${capitalize(data.critic_type)}: ${status} (${data.score}/10)`, cls);
+}
+
+function addLogItem(text, status = 'active') {
+  const log = document.getElementById('progress-log');
+  const item = document.createElement('li');
+  item.className = `log-item ${status}`;
+
+  const isActive = status === 'active';
+  item.innerHTML = `
+    <span class="log-icon">${isActive ? '<span class="spinner"></span>' : ''}</span>
+    <span>${text}</span>
+  `;
+
+  // Remove spinner from previous active item
+  log.querySelectorAll('.log-item.active').forEach(el => {
+    el.classList.remove('active');
+    el.classList.add('done');
+    el.querySelector('.log-icon').innerHTML = '';
+  });
+
+  log.appendChild(item);
+  log.scrollTop = log.scrollHeight;
+}
+
+// ── Map rendering ──────────────────────────────────────────────────────────
+function clearMap() {
+  state.markers.forEach(m => state.map.removeLayer(m));
+  state.routeLines.forEach(l => state.map.removeLayer(l));
+  state.serendipityZones.forEach(z => state.map.removeLayer(z));
+  state.markers = [];
+  state.routeLines = [];
+  state.serendipityZones = [];
+}
+
+function renderMap(itinerary) {
+  clearMap();
+
+  const bounds = [];
+  const allPoints = [];
+
+  itinerary.days.forEach((day, dayIdx) => {
+    const color = state.dayColors[dayIdx % state.dayColors.length];
+    const dayPoints = [];
+
+    day.experiences.forEach((sched, expIdx) => {
+      const exp = sched.experience;
+      if (!exp.location || exp.location.length < 2) return;
+
+      const [lat, lng] = exp.location;
+      bounds.push([lat, lng]);
+      dayPoints.push([lat, lng]);
+
+      // Custom marker
+      const markerEl = document.createElement('div');
+      markerEl.className = 'day-marker';
+      markerEl.style.background = color;
+      markerEl.style.borderColor = 'rgba(255,255,255,0.8)';
+      markerEl.textContent = `${dayIdx + 1}`;
+
+      const icon = L.divIcon({
+        html: markerEl.outerHTML,
+        className: '',
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16],
+      });
+
+      const regretEmoji = exp.regret_tier === 'must_do' ? '🔴' :
+                          exp.regret_tier === 'should_do' ? '🟡' : '🟢';
+
+      const marker = L.marker([lat, lng], { icon })
+        .bindPopup(`
+          <div class="popup-exp-name">${exp.name}</div>
+          <div class="popup-time">⏰ ${sched.start_time} – ${sched.end_time} &nbsp; ${regretEmoji}</div>
+          ${exp.cost_euros > 0 ? `<div class="popup-time">💶 €${exp.cost_euros}</div>` : ''}
+          <div class="popup-desc">${exp.description?.substring(0, 120)}...</div>
+        `)
+        .addTo(state.map);
+
+      state.markers.push(marker);
+
+      // Serendipity zone
+      if (exp.experience_type === 'serendipity') {
+        const zone = L.circle([lat, lng], {
+          radius: 300,
+          className: 'serendipity-zone',
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.06,
+          weight: 1,
+          dashArray: '4,4',
+        }).addTo(state.map);
+        zone.bindPopup(`<div class="popup-exp-name">Wander Zone: ${exp.neighborhood || exp.name}</div><div class="popup-desc">Walk here with no plan for 45 minutes. See what finds you.</div>`);
+        state.serendipityZones.push(zone);
+      }
+    });
+
+    allPoints.push({ color, points: dayPoints });
+  });
+
+  // Animate route drawing
+  if (bounds.length > 0) {
+    state.map.fitBounds(bounds, { padding: [40, 40], animate: true, duration: 1 });
+    animateRoute(allPoints);
+  }
+}
+
+function animateRoute(allPoints) {
+  let dayDelay = 0;
+
+  allPoints.forEach(({ color, points }) => {
+    if (points.length < 2) return;
+
+    setTimeout(() => {
+      drawRouteAnimated(points, color);
+    }, dayDelay);
+
+    dayDelay += 600;
+  });
+}
+
+function drawRouteAnimated(points, color) {
+  // Draw the full line immediately with a CSS animation effect
+  const polyline = L.polyline(points, {
+    color: color,
+    weight: 2.5,
+    opacity: 0.7,
+    dashArray: '6, 8',
+    lineCap: 'round',
+  }).addTo(state.map);
+
+  state.routeLines.push(polyline);
+
+  // Animate by progressively revealing the line
+  let progress = 0;
+  const steps = 40;
+  const interval = setInterval(() => {
+    progress += 1 / steps;
+    polyline.setStyle({ opacity: Math.min(0.7, progress * 0.7) });
+    if (progress >= 1) clearInterval(interval);
+  }, 30);
+}
+
+function centerMap() {
+  if (!state.itinerary) return;
+  const bounds = [];
+  state.itinerary.days.forEach(day => {
+    day.experiences.forEach(s => {
+      if (s.experience.location?.length >= 2) {
+        bounds.push(s.experience.location);
+      }
+    });
+  });
+  if (bounds.length > 0) {
+    state.map.fitBounds(bounds, { padding: [40, 40], animate: true });
+  }
+}
+
+function toggleWeather() {
+  state.weatherOverlay = !state.weatherOverlay;
+  const btn = document.getElementById('toggle-weather');
+  btn.classList.toggle('active', state.weatherOverlay);
+  // Weather is displayed in the itinerary panel — just highlight the button
+}
+
+function reanimateRoute() {
+  if (!state.itinerary) return;
+  state.routeLines.forEach(l => state.map.removeLayer(l));
+  state.routeLines = [];
+
+  const allPoints = state.itinerary.days.map((day, dayIdx) => ({
+    color: state.dayColors[dayIdx % state.dayColors.length],
+    points: day.experiences
+      .filter(s => s.experience.location?.length >= 2)
+      .map(s => s.experience.location),
+  }));
+
+  animateRoute(allPoints);
+}
+
+// ── Itinerary rendering ────────────────────────────────────────────────────
+function renderItinerary(itinerary) {
+  const container = document.getElementById('itinerary-content');
+  const totalCost = itinerary.total_cost || 0;
+
+  document.getElementById('total-cost-display').innerHTML =
+    `${itinerary.destination?.toUpperCase()} · ${itinerary.days?.length || 0} days · <strong style="color:var(--gold);">€${totalCost.toFixed(0)} total</strong>`;
+
+  // Build regret summary
+  const rankings = itinerary.regret_rankings || [];
+  const mustDo = rankings.filter(r => r.tier === 'must_do').map(r => r.experience_name);
+  const shouldDo = rankings.filter(r => r.tier === 'should_do').map(r => r.experience_name);
+  const niceToHave = rankings.filter(r => r.tier === 'nice_to_have').map(r => r.experience_name);
+
+  let regretHtml = '';
+  if (rankings.length > 0) {
+    regretHtml = `
+      <div class="regret-summary">
+        <h4>Regret Minimizer</h4>
+        ${mustDo.length ? `<div class="regret-tier-row">
+          <span class="regret-tier-label">🔴 Must Do</span>
+          <span class="regret-names">${mustDo.join(', ')}</span>
+        </div>` : ''}
+        ${shouldDo.length ? `<div class="regret-tier-row">
+          <span class="regret-tier-label">🟡 Should Do</span>
+          <span class="regret-names">${shouldDo.slice(0, 3).join(', ')}${shouldDo.length > 3 ? '...' : ''}</span>
+        </div>` : ''}
+        ${niceToHave.length ? `<div class="regret-tier-row">
+          <span class="regret-tier-label">🟢 Nice to Have</span>
+          <span class="regret-names">${niceToHave.slice(0, 2).join(', ')}${niceToHave.length > 2 ? '...' : ''}</span>
+        </div>` : ''}
+      </div>
+    `;
+  }
+
+  // Build critiques summary
+  const critiques = itinerary.critiques || [];
+  let critiqueHtml = '';
+  if (critiques.length > 0) {
+    const rows = critiques.map(c => {
+      const scoreClass = c.score >= 8 ? 'score-good' : c.score >= 6 ? 'score-ok' : 'score-bad';
+      const icon = {logistics:'🚌', experience:'✨', energy:'⚡', budget:'💶', authenticity:'🌿'}[c.critic_type] || '🔍';
+      return `<div class="critique-row">
+        <span class="critique-label">${icon} ${capitalize(c.critic_type)}</span>
+        <span class="critique-score ${scoreClass}">${c.score}/10</span>
+      </div>`;
+    }).join('');
+
+    critiqueHtml = `
+      <div class="regret-summary" style="margin:0 16px 16px;">
+        <h4>Critic Panel</h4>
+        ${rows}
+      </div>
+    `;
+  }
+
+  // Build day sections
+  const daysHtml = (itinerary.days || []).map((day, dayIdx) => {
+    const color = state.dayColors[dayIdx % state.dayColors.length];
+    return buildDaySection(day, dayIdx, color);
+  }).join('');
+
+  container.innerHTML = `
+    <div class="itinerary-content">
+      ${regretHtml}
+      ${daysHtml}
+      ${critiqueHtml}
+    </div>
+  `;
+
+  // Auto-open first day
+  const firstDay = container.querySelector('.day-section');
+  if (firstDay) firstDay.classList.add('open');
+}
+
+function buildDaySection(day, dayIdx, color) {
+  const weatherIcons = {sunny:'☀️', partly_cloudy:'⛅', cloudy:'☁️', rainy:'🌧️', snowy:'❄️', stormy:'⛈️'};
+  const arcClasses = {
+    'Peak Day': 'arc-peak',
+    'Orientation Day': 'arc-orientation',
+    'Deep Dive Day': 'arc-deep',
+    'The Farewell Day': 'arc-farewell',
+  };
+
+  const weatherIcon = weatherIcons[day.weather?.condition] || '🌤';
+  const weatherStr = day.weather ?
+    `${weatherIcon} ${day.weather.temp_high}°/${day.weather.temp_low}°` : '';
+
+  const dateStr = day.date ? new Date(day.date + 'T00:00:00').toLocaleDateString('en', {weekday:'short', month:'short', day:'numeric'}) : '';
+
+  const arcClass = arcClasses[day.arc_label] || 'arc-default';
+  const arcHtml = `<span class="arc-badge ${arcClass}">★ ${day.arc_label}</span>`;
+
+  const expsHtml = (day.experiences || []).map((sched, idx, arr) => {
+    const exp = sched.experience;
+    const rankings = state.itinerary?.regret_rankings || [];
+    const rank = rankings.find(r => r.experience_id === exp.id);
+    return buildExpCard(sched, exp, rank, idx < arr.length - 1 ? arr[idx + 1] : null);
+  }).join('');
+
+  return `
+    <div class="day-section" id="day-${day.day_number}">
+      <div class="day-header" onclick="toggleDay(this.parentElement)">
+        <div class="day-num" style="background:${color};color:white;">${day.day_number}</div>
+        <div class="day-info">
+          <div class="day-title">${dateStr || 'Day ' + day.day_number}</div>
+          <div class="day-meta">
+            <span class="day-meta-item">${day.arc_label}</span>
+            ${weatherStr ? `<span class="day-meta-item">${weatherStr}</span>` : ''}
+            <span class="day-meta-item">€${(day.total_cost || 0).toFixed(0)}</span>
+          </div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="day-body">
+        ${arcHtml}
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">${day.arc_description}</div>
+        ${expsHtml}
+      </div>
+    </div>
+  `;
+}
+
+function buildExpCard(sched, exp, rank, nextSched) {
+  const typeClass = `type-${exp.experience_type || 'passive'}`;
+  const costStr = exp.cost_euros > 0 ? `€${exp.cost_euros}` : 'Free';
+  const durStr = `${exp.duration_minutes}min`;
+
+  let regretBadge = '';
+  if (rank) {
+    const badgeClass = rank.tier === 'must_do' ? 'regret-must' :
+                       rank.tier === 'should_do' ? 'regret-should' : 'regret-nice';
+    const emoji = rank.tier === 'must_do' ? '🔴' : rank.tier === 'should_do' ? '🟡' : '🟢';
+    regretBadge = `<span class="regret-badge ${badgeClass}">${emoji} ${rank.tier.replace('_', ' ')}</span>`;
+  }
+
+  const travelConnector = nextSched && nextSched.travel_time_from_prev > 0 ? `
+    <div class="travel-connector">
+      <div class="travel-line"></div>
+      <span>${nextSched.travel_mode === 'transit' ? '🚇' : '🚶'} ${nextSched.travel_time_from_prev} min ${nextSched.travel_mode}</span>
+    </div>
+  ` : '';
+
+  return `
+    <div class="exp-card" onclick="toggleExp(this)" data-exp-id="${exp.id}">
+      <div class="exp-header">
+        <span class="exp-time">${sched.start_time}</span>
+        <div class="exp-main">
+          <div class="exp-name">${exp.name}</div>
+          <div class="exp-meta">
+            <span class="exp-type-badge ${typeClass}">${exp.experience_type}</span>
+            <span class="exp-cost">${costStr}</span>
+            <span class="exp-duration">⏱ ${durStr}</span>
+            ${regretBadge}
+          </div>
+        </div>
+      </div>
+      <div class="exp-expanded">
+        ${exp.description ? `<div class="exp-description">${exp.description}</div>` : ''}
+        ${exp.why_this_matters ? `<div class="exp-why">✦ ${exp.why_this_matters}</div>` : ''}
+        ${exp.practical_tips ? `<div class="exp-tips">💡 ${exp.practical_tips}</div>` : ''}
+      </div>
+    </div>
+    ${travelConnector}
+  `;
+}
+
+function toggleDay(el) {
+  el.classList.toggle('open');
+}
+
+function toggleExp(el) {
+  const expId = el.dataset.expId;
+
+  // Close others
+  document.querySelectorAll('.exp-card.expanded').forEach(c => {
+    if (c !== el) c.classList.remove('expanded');
+  });
+
+  el.classList.toggle('expanded');
+
+  // Pan map to this experience
+  if (state.itinerary && expId) {
+    for (const day of state.itinerary.days) {
+      for (const sched of day.experiences) {
+        if (sched.experience.id === expId && sched.experience.location?.length >= 2) {
+          state.map.panTo(sched.experience.location, { animate: true, duration: 0.5 });
+          // Open the marker popup
+          state.markers.forEach(m => {
+            if (m.getLatLng().lat === sched.experience.location[0] &&
+                m.getLatLng().lng === sched.experience.location[1]) {
+              m.openPopup();
+            }
+          });
+          break;
+        }
+      }
+    }
+  }
+}
+
+// ── Replanning ─────────────────────────────────────────────────────────────
+async function submitReplan() {
+  const disruption = document.getElementById('replan-input').value.trim();
+  if (!disruption || !state.sessionId) return;
+
+  document.getElementById('progress-overlay').style.display = 'flex';
+  document.getElementById('progress-log').innerHTML = '';
+  addLogItem(`🔄 Analyzing: "${disruption}"`, 'done');
+
+  try {
+    const response = await fetch('/api/replan', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        session_id: state.sessionId,
+        disruption: disruption,
+        completed_day_indices: [],
+      }),
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || '';
+
+      for (const chunk of lines) {
+        if (!chunk.trim()) continue;
+        const eventMatch = chunk.match(/^event: (\w+)\ndata: (.+)$/s);
+        if (!eventMatch) continue;
+
+        const [, event, data] = eventMatch;
+        try {
+          const parsed = JSON.parse(data);
+          if (event === 'progress') addLogItem(parsed.message, 'done');
+          if (event === 'complete') {
+            state.itinerary = parsed.itinerary;
+            addLogItem('✅ Replanning complete!', 'done');
+            setTimeout(() => {
+              document.getElementById('progress-overlay').style.display = 'none';
+              renderItinerary(state.itinerary);
+              renderMap(state.itinerary);
+              document.getElementById('replan-input').value = '';
+            }, 800);
+          }
+          if (event === 'error') {
+            addLogItem('❌ ' + parsed.message, 'warn');
+            setTimeout(() => {
+              document.getElementById('progress-overlay').style.display = 'none';
+            }, 2000);
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    addLogItem('❌ ' + e.message, 'warn');
+    setTimeout(() => {
+      document.getElementById('progress-overlay').style.display = 'none';
+    }, 2000);
+  }
+}
+
+// Allow Enter in replan input
+document.getElementById('replan-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitReplan();
+});
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

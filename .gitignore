@@ -1,0 +1,31 @@
+# Environment
+.env
+.env.local
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Sessions / user data
+sessions/
+
+# Data files
+data/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

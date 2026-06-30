@@ -26,6 +26,7 @@ async def fetch_weather(city: str, start_date: str, days: int) -> list[dict]:
         "amsterdam": (52.3676, 4.9041),
         "paris": (48.8566, 2.3522),
         "tokyo": (35.6762, 139.6503),
+        "london": (51.5074, -0.1278),
     }
     coords = city_coords.get(city.lower(), (52.3676, 4.9041))
 

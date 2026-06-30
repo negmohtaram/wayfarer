@@ -12,9 +12,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
 KNOWLEDGE_DIR = BASE_DIR / "src" / "knowledge" / "cities"
-DATA_DIR = BASE_DIR / "data" / "city_knowledge"
 
-SUPPORTED_CITIES = ["amsterdam", "paris", "tokyo"]
+SUPPORTED_CITIES = ["amsterdam", "paris", "tokyo", "london"]
 
 MAX_REVISION_CYCLES = 2
 EXPERIENCE_POOL_MULTIPLIER = 3  # generate 3x more experiences than needed

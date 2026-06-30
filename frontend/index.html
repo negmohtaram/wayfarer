@@ -833,6 +833,7 @@
         <div class="city-pill active" onclick="selectCity('amsterdam',this)">Amsterdam</div>
         <div class="city-pill" onclick="selectCity('paris',this)">Paris</div>
         <div class="city-pill" onclick="selectCity('tokyo',this)">Tokyo</div>
+        <div class="city-pill" onclick="selectCity('london',this)">London</div>
       </div>
     </div>
 
@@ -1009,6 +1010,7 @@ function selectCity(city, el) {
     amsterdam: [52.3676, 4.9041],
     paris: [48.8566, 2.3522],
     tokyo: [35.6762, 139.6503],
+    london: [51.5074, -0.1278],
   };
   if (state.map) {
     state.map.setView(cityCoords[city], 13, { animate: true, duration: 1 });

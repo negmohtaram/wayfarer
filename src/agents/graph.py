@@ -1,6 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 from src.agents.state import PlanningState
 from src.agents.nodes.experience_generator import experience_generator_node
+from src.agents.nodes.enrichment import enrichment_node
 from src.agents.nodes.optimizer import optimizer_node
 from src.agents.nodes.assembler import assembler_node
 from src.agents.nodes.critic_panel import critic_panel_node, route_after_critique
@@ -12,6 +13,7 @@ def build_planning_graph():
     graph = StateGraph(PlanningState)
 
     graph.add_node("experience_generator", experience_generator_node)
+    graph.add_node("enrichment", enrichment_node)
     graph.add_node("optimizer", optimizer_node)
     graph.add_node("assembler", assembler_node)
     graph.add_node("critic_panel", critic_panel_node)
@@ -19,7 +21,8 @@ def build_planning_graph():
     graph.add_node("regret_minimizer", regret_minimizer_node)
 
     graph.add_edge(START, "experience_generator")
-    graph.add_edge("experience_generator", "optimizer")
+    graph.add_edge("experience_generator", "enrichment")
+    graph.add_edge("enrichment", "optimizer")
     graph.add_edge("optimizer", "assembler")
     graph.add_edge("assembler", "critic_panel")
     graph.add_conditional_edges(

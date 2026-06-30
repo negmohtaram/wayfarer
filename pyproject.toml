@@ -24,6 +24,7 @@ dependencies = [
     "sse-starlette>=2.1.0",
     "aiofiles>=23.2.0",
     "python-multipart>=0.0.9",
+    "duckduckgo-search>=6.0.0",
 ]
 
 [project.optional-dependencies]

@@ -1,66 +1,84 @@
-from src.models.itinerary import Itinerary, CritiqueResult
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from src.agents.llm import get_llm
+from src.models.itinerary import CritiqueResult, Itinerary
 
 
 async def experience_critic(itinerary: Itinerary) -> CritiqueResult:
+    """Evaluate experience quality and narrative arc using LLM judgment.
+
+    Why LLM here instead of rules?
+    Rules can check "is there variety?" by counting types. They can't judge
+    whether the itinerary tells a coherent story, whether the emotional arc
+    builds well, or whether the final experience is truly memorable. Those
+    are qualitative judgments — exactly what LLMs are good at.
+
+    with_structured_output(CritiqueResult) tells LangChain to use the model's
+    function-calling feature to return data in exactly the shape of CritiqueResult.
+    No manual json.loads() or parsing — Pydantic validates it directly.
+    """
+    persona = itinerary.persona
+
+    days_summary = []
+    for day in itinerary.days:
+        names = [s.experience.name for s in day.experiences]
+        types = [s.experience.experience_type for s in day.experiences]
+        local_scores = [s.experience.local_score for s in day.experiences]
+        avg_score = sum(s.experience.persona_score or 0 for s in day.experiences) / max(len(day.experiences), 1)
+        days_summary.append(
+            f"Day {day.day_number} ({day.arc_label}): {', '.join(names)}\n"
+            f"  Types: {', '.join(types)} | Avg local score: {sum(local_scores)/max(len(local_scores),1):.1f} "
+            f"| Avg fit score: {avg_score:.2f}"
+        )
+
+    prompt = f"""You are evaluating a {persona.trip_days}-day itinerary for {persona.destination.title()}.
+
+Traveler: {persona.social_context}, pace {persona.pace}/10 (10=very slow),
+food {persona.food_importance}/10, culture {persona.culture_importance}/10,
+local preference {persona.local_vs_tourist}/10 (10=very local).
+
+Itinerary:
+{chr(10).join(days_summary)}
+
+Evaluate on these dimensions:
+1. Variety — is there a healthy mix of experience types or is it repetitive?
+2. Emotional arc — does intensity/excitement build toward a peak day and land well?
+3. Narrative coherence — does each day feel like a chapter with a theme?
+4. Ending quality — does the final day close on something memorable?
+5. Persona fit — do the experience types match what this traveler actually wants?
+
+Return critic_type as exactly "experience".
+Score 0-10. Verdict must be "approve" (score>=7), "revise" (4-7), or "reject_day" (<4).
+List specific issues and concrete suggestions. affected_days should be day numbers with problems."""
+
+    try:
+        llm = get_llm(temperature=0.3).with_structured_output(CritiqueResult)
+        result = await llm.ainvoke([
+            SystemMessage("You are a precise travel itinerary critic. Return structured evaluations."),
+            HumanMessage(prompt),
+        ])
+        return result
+    except Exception:
+        # Fall back to simple rule-based check if LLM fails
+        return _fallback_critique(itinerary)
+
+
+def _fallback_critique(itinerary: Itinerary) -> CritiqueResult:
+    """Simple rule-based fallback used only when the LLM call fails."""
     issues = []
-    suggestions = []
     score = 10.0
-    affected_days = []
-
-    total_days = len(itinerary.days)
-
     for day in itinerary.days:
         types = [s.experience.experience_type for s in day.experiences]
-        type_set = set(types)
-
-        # Check variety — no more than 3 of same type
-        type_counts = {t: types.count(t) for t in type_set}
-        for exp_type, count in type_counts.items():
-            if exp_type == "cultural" and count >= 4:
-                issues.append(f"Day {day.day_number}: {count} cultural experiences in a row — museum fatigue risk")
-                suggestions.append(f"Day {day.day_number}: Replace one cultural visit with a food or walking experience")
-                score -= 1.5
-                if day.day_number not in affected_days:
-                    affected_days.append(day.day_number)
-
-        # Check for at least one memorable/peak experience
-        has_high_local = any(s.experience.local_score >= 7 for s in day.experiences)
-        has_good_description = any(len(s.experience.why_this_matters) > 50 for s in day.experiences)
-        if not has_high_local and not has_good_description:
-            issues.append(f"Day {day.day_number}: Lacks a memorable anchor experience")
-            suggestions.append(f"Day {day.day_number}: Add at least one experience with a compelling story")
-            score -= 1.0
-
-        # Check emotional arc — peak day should be middle-ish
-        if total_days >= 3:
-            peak_day = total_days // 2 + 1
-            if day.day_number == peak_day:
-                avg_score = sum(
-                    s.experience.persona_score or 0 for s in day.experiences
-                ) / max(len(day.experiences), 1)
-                if avg_score < 0.6:
-                    issues.append(f"Day {day.day_number} is the peak day but has low-scoring experiences")
-                    suggestions.append("Schedule the best experiences on the peak day")
-                    score -= 1.0
-                    if day.day_number not in affected_days:
-                        affected_days.append(day.day_number)
-
-        # Check last day ends memorably
-        if day.day_number == total_days and day.experiences:
-            last_exp = day.experiences[-1].experience
-            if last_exp.experience_type not in ("scenic", "food", "serendipity") or last_exp.romantic_score < 6:
-                issues.append(f"Day {day.day_number}: Itinerary doesn't end on a high note")
-                suggestions.append("End the final day with something scenic or emotionally resonant")
-                score -= 0.5
-
-    score = max(0.0, score)
+        cultural_count = types.count("cultural")
+        if cultural_count >= 4:
+            issues.append(f"Day {day.day_number}: {cultural_count} cultural experiences — museum fatigue risk")
+            score -= 1.5
     verdict = "approve" if score >= 7 else ("revise" if score >= 4 else "reject_day")
-
     return CritiqueResult(
         critic_type="experience",
         score=round(score, 1),
         issues=issues,
-        suggestions=suggestions if suggestions else ["Strong emotional arc and variety"],
+        suggestions=["Review for variety"] if issues else ["Strong variety"],
         verdict=verdict,
-        affected_days=affected_days,
+        affected_days=[],
     )

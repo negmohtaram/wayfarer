@@ -1,7 +1,10 @@
 import json
+import logging
 from pathlib import Path
 from src.config import KNOWLEDGE_DIR
 from src.models.experience import Experience
+
+logger = logging.getLogger(__name__)
 
 
 _city_cache: dict[str, dict] = {}
@@ -24,7 +27,8 @@ def get_city_experiences(city: str) -> list[Experience]:
         try:
             exp = Experience(**exp_data)
             experiences.append(exp)
-        except Exception:
+        except Exception as e:
+            logger.warning("Skipping invalid experience in %s: %s", city, e)
             continue
     return experiences
 

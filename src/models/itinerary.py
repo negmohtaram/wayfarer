@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 from .experience import ScheduledExperience
 from .persona import TravelerPersona
 
@@ -29,7 +29,7 @@ class CritiqueResult(BaseModel):
     score: float  # 0-10
     issues: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
-    verdict: str  # "approve" | "revise" | "reject_day"
+    verdict: Literal["approve", "revise", "reject_day"]
     affected_days: list[int] = Field(default_factory=list)
 
 

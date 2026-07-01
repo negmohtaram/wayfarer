@@ -1,6 +1,5 @@
 import json
 import uuid
-import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator
@@ -15,7 +14,7 @@ from src.agents.nodes.persona_builder import run_persona_turn, build_persona_fro
 from src.agents.state import PlanningState, ReplanningState
 from src.models.persona import TravelerPersona
 from src.models.itinerary import Itinerary
-from src.config import SESSION_DIR
+from src.config import SESSION_DIR, SUPPORTED_CITIES
 
 router = APIRouter()
 
@@ -265,7 +264,7 @@ async def replan(req: ReplanRequest):
 
 @router.get("/cities")
 async def list_cities():
-    return {"cities": ["amsterdam", "paris", "tokyo"]}
+    return {"cities": SUPPORTED_CITIES}
 
 
 @router.get("/health")

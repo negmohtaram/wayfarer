@@ -1,5 +1,4 @@
 from src.models.itinerary import Itinerary, CritiqueResult
-from src.models.persona import TravelerPersona
 from src.optimization.energy import build_energy_curve, get_energy_at_time
 
 

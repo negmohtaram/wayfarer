@@ -1,5 +1,4 @@
 from src.agents.state import PlanningState
-from src.agents.nodes.assembler import assembler_node
 from src.models.itinerary import CritiqueResult
 from src.models.experience import ScheduledExperience
 

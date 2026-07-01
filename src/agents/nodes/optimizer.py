@@ -1,5 +1,4 @@
 from src.agents.state import PlanningState
-from src.models.experience import Experience
 from src.models.persona import TravelerPersona
 from src.optimization.route import cluster_by_day, optimize_route
 from src.optimization.energy import sequence_by_energy, get_day_start_time

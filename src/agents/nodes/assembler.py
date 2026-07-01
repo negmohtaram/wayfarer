@@ -1,12 +1,11 @@
 import httpx
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from src.agents.state import PlanningState
-from src.agents.llm import get_llm
 from src.models.experience import Experience, ScheduledExperience
 from src.models.itinerary import Itinerary, DayPlan, WeatherForecast
 from src.models.persona import TravelerPersona
 from src.optimization.route import travel_time_minutes
-from src.optimization.energy import minutes_to_time, get_day_start_time, time_to_minutes
+from src.optimization.energy import minutes_to_time, get_day_start_time
 
 
 ARC_LABELS = {

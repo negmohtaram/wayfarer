@@ -1,6 +1,5 @@
 import json
 import logging
-from pathlib import Path
 from src.config import KNOWLEDGE_DIR
 from src.models.experience import Experience
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from src.agents.state import PlanningState
 from src.agents.nodes.critics.logistics import logistics_critic
 from src.agents.nodes.critics.experience import experience_critic
@@ -6,6 +7,16 @@ from src.agents.nodes.critics.energy import energy_critic
 from src.agents.nodes.critics.budget import budget_critic
 from src.agents.nodes.critics.authenticity import authenticity_critic
 from src.models.itinerary import CritiqueResult
+
+logger = logging.getLogger(__name__)
+
+_CRITICS = [
+    ("logistics", logistics_critic),
+    ("experience", experience_critic),
+    ("energy", energy_critic),
+    ("budget", budget_critic),
+    ("authenticity", authenticity_critic),
+]
 
 
 async def critic_panel_node(state: PlanningState) -> PlanningState:
@@ -20,25 +31,21 @@ async def critic_panel_node(state: PlanningState) -> PlanningState:
 
     # Run all 5 critics in parallel
     results = await asyncio.gather(
-        logistics_critic(itinerary),
-        experience_critic(itinerary),
-        energy_critic(itinerary),
-        budget_critic(itinerary),
-        authenticity_critic(itinerary),
+        *[fn(itinerary) for _, fn in _CRITICS],
         return_exceptions=True,
     )
 
     critiques: list[CritiqueResult] = []
-    for result in results:
+    for (critic_name, _), result in zip(_CRITICS, results):
         if isinstance(result, CritiqueResult):
             critiques.append(result)
         elif isinstance(result, Exception):
-            # Don't fail the whole pipeline on a critic error
+            logger.error("Critic '%s' raised an exception: %s", critic_name, result, exc_info=result)
             critiques.append(CritiqueResult(
-                critic_type="unknown",
-                score=7.0,
-                issues=[str(result)],
-                suggestions=[],
+                critic_type=critic_name,
+                score=5.0,
+                issues=[f"Critic failed with error: {result}"],
+                suggestions=["Re-run planning pipeline if this critic is critical"],
                 verdict="approve",
             ))
 

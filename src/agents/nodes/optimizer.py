@@ -63,7 +63,7 @@ async def optimizer_node(state: PlanningState) -> PlanningState:
 
         optimized_days.append(sequenced)
 
-    state["scored_experiences"] = optimized_days  # type: ignore[assignment]
+    state["optimized_days"] = optimized_days
     state["log"].append(f"📐 Route optimized: {days} days, {per_day} experiences/day")
 
     return state

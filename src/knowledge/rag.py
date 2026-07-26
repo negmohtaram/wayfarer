@@ -57,6 +57,33 @@ def get_city_photography_spots(city: str) -> list[dict]:
     return _load_city(city).get("photography_spots", [])
 
 
+MIN_EXPERIENCES_PER_CITY = 10
+
+
+def validate_city_knowledge(min_experiences: int = MIN_EXPERIENCES_PER_CITY) -> None:
+    """Fail fast at startup if any city file is missing or under-populated."""
+    city_files = list(KNOWLEDGE_DIR.glob("*.json"))
+    if not city_files:
+        raise RuntimeError(f"No city knowledge files found in {KNOWLEDGE_DIR}")
+
+    errors: list[str] = []
+    for path in city_files:
+        city = path.stem
+        try:
+            experiences = get_city_experiences(city)
+            if len(experiences) < min_experiences:
+                errors.append(
+                    f"  {city}: only {len(experiences)} valid experiences (minimum {min_experiences})"
+                )
+        except Exception as e:
+            errors.append(f"  {city}: failed to load — {e}")
+
+    if errors:
+        raise RuntimeError("City knowledge validation failed:\n" + "\n".join(errors))
+
+    logger.info("City knowledge validated: %d cities loaded", len(city_files))
+
+
 def get_city_summary(city: str) -> str:
     data = _load_city(city)
     neighborhoods = data.get("neighborhoods", [])

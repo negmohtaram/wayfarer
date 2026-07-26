@@ -217,7 +217,7 @@ async def assembler_node(state: PlanningState) -> PlanningState:
     state["log"].append("📅 Assembling itinerary...")
 
     persona = state.get("persona")
-    optimized_days: list[list[Experience]] = state.get("scored_experiences", [])  # type: ignore
+    optimized_days: list[list[Experience]] = state.get("optimized_days", [])
 
     if not persona or not optimized_days:
         state["error"] = "Missing persona or optimized experiences"

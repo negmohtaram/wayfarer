@@ -1,11 +1,20 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pathlib import Path
 
 from src.api.routes import router
+from src.knowledge.rag import validate_city_knowledge
 
-app = FastAPI(title="WAYFARER", description="Multi-agent AI travel planning system", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    validate_city_knowledge()
+    yield
+
+
+app = FastAPI(title="WAYFARER", description="Multi-agent AI travel planning system", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

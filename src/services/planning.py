@@ -44,7 +44,7 @@ async def stream_planning(session_id: str, persona: TravelerPersona) -> AsyncGen
                 itinerary = node_state.get("itinerary")
                 if itinerary and hasattr(itinerary, "model_dump"):
                     itin_data = itinerary.model_dump()
-                    save_session(session_id, {
+                    await save_session(session_id, {
                         "session_id": session_id,
                         "persona": persona.model_dump(),
                         "itinerary": itin_data,
@@ -66,7 +66,7 @@ async def stream_replanning(
     yield _sse("start", {"message": f"Replanning: {disruption}"})
 
     try:
-        data = load_session(session_id)
+        data = await load_session(session_id)
         persona = TravelerPersona(**data["persona"])
         itinerary = Itinerary(**data["itinerary"])
 
@@ -91,7 +91,7 @@ async def stream_replanning(
                 if new_itinerary and hasattr(new_itinerary, "model_dump"):
                     itin_data = new_itinerary.model_dump()
                     data["itinerary"] = itin_data
-                    save_session(session_id, data)
+                    await save_session(session_id, data)
                     yield _sse("complete", {"itinerary": itin_data})
 
         yield _sse("done", {"message": "Replanning complete!"})

@@ -73,7 +73,7 @@ async def persona_turn(req: PersonaTurnRequest):
         response.persona = persona.model_dump()
         response.persona_narrative = result.get("persona_narrative", "")
         response.persona_tags = persona.persona_tags()
-        save_session(session_id, {
+        await save_session(session_id, {
             "session_id": session_id,
             "persona": persona.model_dump(),
             "status": "persona_complete",
@@ -113,12 +113,12 @@ async def replan(req: ReplanRequest):
 
 @router.get("/itinerary/{session_id}")
 async def get_itinerary(session_id: str):
-    return load_session(session_id)
+    return await load_session(session_id)
 
 
 @router.get("/regret/{session_id}")
 async def get_regret_rankings(session_id: str):
-    data = load_session(session_id)
+    data = await load_session(session_id)
     return {
         "session_id": session_id,
         "rankings": data.get("itinerary", {}).get("regret_rankings", []),

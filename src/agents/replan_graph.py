@@ -1,5 +1,9 @@
+import logging
+
 from langgraph.graph import StateGraph, START, END
 from src.agents.state import ReplanningState
+
+logger = logging.getLogger(__name__)
 
 
 async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
@@ -55,8 +59,8 @@ Respond in JSON only:
         if json_match:
             analysis = json.loads(json_match.group(0))
             state["log"].append(f"🔄 Disruption type: {analysis.get('disruption_type', 'other')}")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Disruption analysis failed: %s", e)
 
     return state
 

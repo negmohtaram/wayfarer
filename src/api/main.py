@@ -5,11 +5,14 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 
 from src.api.routes import router
+from src.config import GROQ_API_KEY
 from src.knowledge.rag import validate_city_knowledge
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not GROQ_API_KEY:
+        raise RuntimeError("GROQ_API_KEY environment variable is not set")
     validate_city_knowledge()
     yield
 

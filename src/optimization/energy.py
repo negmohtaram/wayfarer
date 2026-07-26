@@ -43,6 +43,7 @@ def time_to_minutes(t: str) -> int:
 
 
 def minutes_to_time(m: int) -> str:
+    m = min(m, 23 * 60 + 59)  # clamp — scheduler catches overflows via logistics critic
     h = m // 60
     mins = m % 60
     return f"{h:02d}:{mins:02d}"

@@ -1,6 +1,7 @@
 import httpx
 from datetime import datetime, timedelta
 from src.agents.state import PlanningState
+from src.knowledge.rag import get_city_coordinates
 from src.models.experience import Experience, ScheduledExperience
 from src.models.itinerary import Itinerary, DayPlan, WeatherForecast
 from src.models.persona import TravelerPersona
@@ -21,13 +22,8 @@ FINAL_DAY_LABEL = ("The Farewell Day", "End on a high. See something beautiful. 
 
 async def fetch_weather(city: str, start_date: str, days: int) -> list[dict]:
     """Fetch weather from Open-Meteo API (free, no key required)."""
-    city_coords = {
-        "amsterdam": (52.3676, 4.9041),
-        "paris": (48.8566, 2.3522),
-        "tokyo": (35.6762, 139.6503),
-        "london": (51.5074, -0.1278),
-    }
-    coords = city_coords.get(city.lower(), (52.3676, 4.9041))
+    raw = get_city_coordinates(city.lower())
+    coords = (raw[0], raw[1]) if raw and len(raw) >= 2 else (52.3676, 4.9041)
 
     try:
         url = (

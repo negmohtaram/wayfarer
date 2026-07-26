@@ -69,6 +69,7 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
                             start_time=sched.start_time,
                             end_time=sched.end_time,
                             travel_time_from_prev=sched.travel_time_from_prev,
+                            travel_mode=sched.travel_mode,
                         ))
                         unused.remove(replacement)
                         used_ids.add(replacement.id)
@@ -87,6 +88,8 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
                             experience=replacement,
                             start_time=to_replace.start_time,
                             end_time=to_replace.end_time,
+                            travel_time_from_prev=to_replace.travel_time_from_prev,
+                            travel_mode=to_replace.travel_mode,
                         ))
                         unused.remove(replacement)
 

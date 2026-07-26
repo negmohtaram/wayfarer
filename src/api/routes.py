@@ -57,6 +57,11 @@ class ReplanRequest(BaseModel):
 
 @router.post("/persona/turn", response_model=PersonaTurnResponse)
 async def persona_turn(req: PersonaTurnRequest):
+    if req.destination.lower() not in SUPPORTED_CITIES:
+        raise HTTPException(
+            400,
+            f"Unsupported destination '{req.destination}'. Supported cities: {', '.join(SUPPORTED_CITIES)}",
+        )
     session_id = req.session_id or str(uuid.uuid4())
     result = await run_persona_turn(
         destination=req.destination,

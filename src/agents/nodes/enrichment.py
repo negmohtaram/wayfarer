@@ -1,8 +1,12 @@
+import logging
+
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from src.agents.llm import get_llm
 from src.agents.state import PlanningState
 from src.agents.tools.search import web_search
+
+logger = logging.getLogger(__name__)
 
 
 async def enrichment_node(state: PlanningState) -> PlanningState:
@@ -65,8 +69,8 @@ async def enrichment_node(state: PlanningState) -> PlanningState:
             if update and len(update) > 20:
                 exp.practical_tips = exp.practical_tips + f"\n\n[Current info, 2026]: {update[:400]}"
 
-        except Exception:
-            # Search failures are non-fatal — keep the original static tips
+        except Exception as e:
+            logger.warning("Enrichment failed for '%s': %s", exp.name, e)
             continue
 
     state["experience_pool"] = experience_pool

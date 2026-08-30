@@ -78,25 +78,68 @@ def optimize_route(experiences: list[Experience]) -> list[Experience]:
 def cluster_by_day(
     experiences: list[Experience],
     num_days: int,
-    city_center: tuple[float, float]
+    city_center: tuple[float, float],
 ) -> list[list[Experience]]:
     """
-    Cluster experiences into day-groups by geographic proximity.
-    Each day forms a coherent geographic cluster to minimize travel.
+    Cluster experiences into geographically coherent day-groups.
+
+    Each day greedily grows its own cluster from a seed experience,
+    pulling in the nearest unassigned experience until the day quota is
+    filled.  Seeds alternate between city-center-nearest (Day 1) and
+    farthest-from-previous-cluster (later days) so consecutive days
+    explore different parts of the city.
+
+    Route optimisation within each cluster is left to the caller
+    (optimizer_node runs optimize_route per cluster).
     """
     if not experiences:
         return [[] for _ in range(num_days)]
 
     per_day = max(1, len(experiences) // num_days)
-    optimized = optimize_route(experiences)
+    remaining = list(experiences)
+    days: list[list[Experience]] = []
 
-    days = []
-    for i in range(num_days):
-        start = i * per_day
-        end = start + per_day if i < num_days - 1 else len(optimized)
-        days.append(optimized[start:end])
+    for day_idx in range(num_days):
+        if not remaining:
+            days.append([])
+            continue
 
-    # Ensure all days have at least something
+        # Last day gets whatever is left
+        quota = len(remaining) if day_idx == num_days - 1 else min(per_day, len(remaining))
+
+        # Seed selection:
+        # Day 0 → nearest to city centre (familiar entry point)
+        # Other days → farthest from the previous cluster's centroid
+        #              (push into a fresh part of the city)
+        if day_idx == 0 or not days or not days[-1]:
+            seed = min(
+                remaining,
+                key=lambda e: haversine(e.location[0], e.location[1], city_center[0], city_center[1]),
+            )
+        else:
+            prev = days[-1]
+            prev_lat = sum(e.location[0] for e in prev) / len(prev)
+            prev_lng = sum(e.location[1] for e in prev) / len(prev)
+            seed = max(
+                remaining,
+                key=lambda e: haversine(e.location[0], e.location[1], prev_lat, prev_lng),
+            )
+
+        cluster: list[Experience] = [seed]
+        remaining.remove(seed)
+
+        # Greedily absorb the nearest unassigned experience
+        while len(cluster) < quota and remaining:
+            anchor = cluster[-1]
+            nearest = min(
+                remaining,
+                key=lambda e: haversine(e.location[0], e.location[1], anchor.location[0], anchor.location[1]),
+            )
+            cluster.append(nearest)
+            remaining.remove(nearest)
+
+        days.append(cluster)
+
     while len(days) < num_days:
         days.append([])
 

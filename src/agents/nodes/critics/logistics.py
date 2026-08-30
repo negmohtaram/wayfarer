@@ -20,11 +20,11 @@ async def logistics_critic(itinerary: Itinerary) -> CritiqueResult:
     affected_days = []
 
     for day in itinerary.days:
+        # Check timing and travel per experience
         for sched_exp in day.experiences:
             start_mins = time_to_minutes(sched_exp.start_time)
             exp = sched_exp.experience
 
-            # Check timing vs best_time_of_day
             valid_window = OPENING_HOURS.get(exp.best_time_of_day, (8 * 60, 22 * 60))
             if not (valid_window[0] <= start_mins <= valid_window[1]):
                 issues.append(
@@ -35,32 +35,27 @@ async def logistics_critic(itinerary: Itinerary) -> CritiqueResult:
                 if day.day_number not in affected_days:
                     affected_days.append(day.day_number)
 
-            # Check no meal gap > 5 hours
-            meal_types = {"food"}
-            food_times = [
-                time_to_minutes(s.start_time)
-                for s in day.experiences
-                if s.experience.experience_type == "food"
-            ]
-            if food_times:
-                max_gap = max(
-                    food_times[i + 1] - food_times[i]
-                    for i in range(len(food_times) - 1)
-                ) if len(food_times) > 1 else 0
-                if max_gap > 5 * 60:
-                    issues.append(f"Day {day.day_number}: Long gap ({max_gap // 60}h) between meals")
-                    suggestions.append(f"Day {day.day_number}: Add a food stop or snack break")
-                    score -= 0.5
-                    if day.day_number not in affected_days:
-                        affected_days.append(day.day_number)
-
-            # Check travel time realism
             if sched_exp.travel_time_from_prev > 45:
                 issues.append(
                     f"Day {day.day_number}: Long travel ({sched_exp.travel_time_from_prev} min) to '{exp.name}'"
                 )
                 suggestions.append(f"Day {day.day_number}: Consider grouping experiences geographically")
                 score -= 0.5
+
+        # Check meal gap once per day (not per experience)
+        food_times = [
+            time_to_minutes(s.start_time)
+            for s in day.experiences
+            if s.experience.experience_type == "food"
+        ]
+        if len(food_times) > 1:
+            max_gap = max(food_times[i + 1] - food_times[i] for i in range(len(food_times) - 1))
+            if max_gap > 5 * 60:
+                issues.append(f"Day {day.day_number}: Long gap ({max_gap // 60}h) between meals")
+                suggestions.append(f"Day {day.day_number}: Add a food stop or snack break")
+                score -= 0.5
+                if day.day_number not in affected_days:
+                    affected_days.append(day.day_number)
 
         # Check day doesn't end past midnight
         if day.experiences:

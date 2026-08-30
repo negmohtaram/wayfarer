@@ -24,3 +24,4 @@ class PlanningState(BaseGraphState, total=False):
 class ReplanningState(BaseGraphState, total=False):
     disruption: str
     completed_day_indices: list[int]
+    disruption_analysis: dict[str, Any]

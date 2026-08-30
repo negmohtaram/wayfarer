@@ -5,7 +5,7 @@ from src.knowledge.rag import get_city_coordinates
 from src.models.experience import Experience, ScheduledExperience
 from src.models.itinerary import Itinerary, DayPlan, WeatherForecast
 from src.models.persona import TravelerPersona
-from src.optimization.route import travel_time_minutes
+from src.optimization.route import haversine, travel_time_minutes
 from src.optimization.energy import minutes_to_time, get_day_start_time
 
 
@@ -161,6 +161,9 @@ def _build_day_schedule(
             if travel_mins > 20:
                 travel_mode = "transit"
                 travel_mins = travel_time_minutes(prev_exp, exp, "transit")
+            else:
+                walk_km = haversine(prev_exp.location[0], prev_exp.location[1], exp.location[0], exp.location[1])
+                total_walk_km += walk_km
 
         current_time += travel_mins
 

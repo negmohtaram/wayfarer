@@ -112,46 +112,34 @@ async def experience_generator_node(state: PlanningState) -> PlanningState:
 
 
 def _ensure_variety(scored: list[Experience], persona: TravelerPersona) -> list[Experience]:
-    """Ensure the pool has variety across experience types."""
+    """Ensure the pool has variety across experience types.
+
+    Uses ID-based tracking at every insertion point so duplicates can
+    never enter the pool regardless of Pydantic equality semantics.
+    """
     type_buckets: dict[str, list[Experience]] = {}
     for exp in scored:
-        t = exp.experience_type
-        type_buckets.setdefault(t, []).append(exp)
+        type_buckets.setdefault(exp.experience_type, []).append(exp)
 
-    # Calculate desired counts based on persona
     days = persona.trip_days
     target_total = min(len(scored), days * EXPERIENCE_POOL_MULTIPLIER * 3)
 
-    # Prioritize types based on persona
-    weights = {
-        "food": persona.food_importance,
-        "cultural": persona.culture_importance,
-        "active": persona.nature_importance,
-        "nature": persona.nature_importance,
-        "scenic": (persona.nature_importance + persona.culture_importance) / 2,
-        "passive": 10 - persona.pace,
-        "serendipity": persona.local_vs_tourist,
-        "nightlife": persona.nightlife_importance,
-    }
-    total_weight = sum(weights.values()) or 1
+    seen_ids: set[str] = set()
+    pool: list[Experience] = []
 
-    pool = []
-    # Always include at least 2 of each available type
-    for exp_type, exps in type_buckets.items():
-        pool.extend(exps[:2])
+    # Guarantee at least 2 representatives of every available type
+    for exps in type_buckets.values():
+        for exp in exps[:2]:
+            if exp.id not in seen_ids:
+                seen_ids.add(exp.id)
+                pool.append(exp)
 
-    # Fill remaining slots by weight
-    remaining = target_total - len(pool)
-    if remaining > 0:
-        remaining_scored = [e for e in scored if e not in pool]
-        pool.extend(remaining_scored[:remaining])
+    # Fill remaining slots from the globally ranked list
+    for exp in scored:
+        if len(pool) >= target_total:
+            break
+        if exp.id not in seen_ids:
+            seen_ids.add(exp.id)
+            pool.append(exp)
 
-    # Deduplicate preserving order
-    seen = set()
-    unique_pool = []
-    for e in pool:
-        if e.id not in seen:
-            seen.add(e.id)
-            unique_pool.append(e)
-
-    return sorted(unique_pool, key=lambda e: e.persona_score or 0, reverse=True)
+    return sorted(pool, key=lambda e: e.persona_score or 0, reverse=True)

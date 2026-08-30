@@ -1,6 +1,6 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.agents.llm import get_llm
+from src.agents.llm import call_with_retry, get_llm
 from src.models.itinerary import CritiqueResult, Itinerary
 
 
@@ -53,13 +53,13 @@ List specific issues and concrete suggestions. affected_days should be day numbe
 
     try:
         llm = get_llm(temperature=0.3).with_structured_output(CritiqueResult)
-        result = await llm.ainvoke([
+        messages = [
             SystemMessage("You are a precise travel itinerary critic. Return structured evaluations."),
             HumanMessage(prompt),
-        ])
+        ]
+        result = await call_with_retry(llm.ainvoke, messages)
         return result
     except Exception:
-        # Fall back to simple rule-based check if LLM fails
         return _fallback_critique(itinerary)
 
 

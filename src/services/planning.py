@@ -38,7 +38,16 @@ async def stream_planning(session_id: str, persona: TravelerPersona) -> AsyncGen
             if node_name == "critic_panel":
                 for critique in node_state.get("critiques", []):
                     if hasattr(critique, "model_dump"):
-                        yield _sse("critique", critique.model_dump())
+                        dumped = critique.model_dump()
+                        yield _sse("critique", dumped)
+                        # Surface critic failures explicitly so the frontend and
+                        # any log consumer can see them rather than misreading a
+                        # silent "approve" at score 5.0.
+                        if dumped.get("verdict") == "error":
+                            yield _sse("warning", {
+                                "message": f"⚠️ {critique.critic_type.title()} critic unavailable — evaluation skipped",
+                                "critic": critique.critic_type,
+                            })
 
             if node_name == "regret_minimizer":
                 itinerary = node_state.get("itinerary")
@@ -84,8 +93,10 @@ async def stream_replanning(
             node_state = chunk.get(node_name, {}) if node_name else {}
 
             for entry in node_state.get("log", []):
-                yield _sse("progress", {"message": entry})
+                yield _sse("progress", {"message": entry, "node": node_name})
 
+            # Emit the updated itinerary as soon as the assembler finishes
+            # (before the validator runs) so the client can render it immediately.
             if node_name == "replan_assembler":
                 new_itinerary = node_state.get("itinerary")
                 if new_itinerary and hasattr(new_itinerary, "model_dump"):

@@ -1,6 +1,5 @@
 from src.agents.state import PlanningState
 from src.models.itinerary import CritiqueResult
-from src.models.experience import ScheduledExperience
 
 
 async def revision_agent_node(state: PlanningState) -> PlanningState:
@@ -16,14 +15,13 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
         state["revision_count"] = state.get("revision_count", 0) + 1
         return state
 
-    # Collect affected days across all critics
-    days_to_revise = set()
+    # Collect affected days across all critics (skip "error" verdicts)
+    days_to_revise: set[int] = set()
     for critique in critiques:
         if critique.verdict in ("revise", "reject_day"):
             for day_num in critique.affected_days:
                 days_to_revise.add(day_num)
             if not critique.affected_days:
-                # If no specific day, flag all days
                 days_to_revise.update(range(1, itinerary.persona.trip_days + 1))
 
     if not days_to_revise:
@@ -32,83 +30,92 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
     state["log"].append(f"🔄 Revising days: {sorted(days_to_revise)}")
 
-    # Get currently used experience IDs
-    used_ids = set()
+    # Track which experiences are in use
+    used_ids: set[str] = set()
     for day in itinerary.days:
         for sched in day.experiences:
             used_ids.add(sched.experience.id)
 
-    # Get candidate replacement experiences (unused, high-scored)
     unused = [e for e in experience_pool if e.id not in used_ids]
     unused.sort(key=lambda e: e.persona_score or 0, reverse=True)
 
     persona = itinerary.persona
+    revised_day_numbers: set[int] = set()
 
-    # Apply revisions to flagged days
     for day in itinerary.days:
         if day.day_number not in days_to_revise:
             continue
 
-        # Check specific issues and apply targeted fixes
+        changed = False
+
         for critique in critiques:
-            if critique.critic_type == "energy" and critique.verdict != "approve":
-                # Reduce experience count for slow travelers
+            if critique.verdict in ("approve", "error"):
+                continue
+
+            if critique.critic_type == "energy":
+                # Trim to 3 experiences for slow-paced travelers who are overloaded
                 if persona.pace >= 7 and len(day.experiences) > 4:
                     day.experiences = day.experiences[:3]
+                    changed = True
 
             if critique.critic_type == "authenticity" and day.day_number in critique.affected_days:
-                # Replace lowest local-score experiences
+                # Swap the lowest local-score experience for a more authentic one
                 day.experiences.sort(key=lambda s: s.experience.local_score)
-                to_replace = day.experiences[:1]
-                for sched in to_replace:
+                for sched in day.experiences[:1]:
                     replacement = _find_replacement(sched.experience, unused, persona, "local")
                     if replacement:
                         day.experiences.remove(sched)
-                        day.experiences.append(ScheduledExperience(
-                            experience=replacement,
-                            start_time=sched.start_time,
-                            end_time=sched.end_time,
-                            travel_time_from_prev=sched.travel_time_from_prev,
-                            travel_mode=sched.travel_mode,
-                        ))
+                        day.experiences.append(replacement)
                         unused.remove(replacement)
                         used_ids.add(replacement.id)
+                        changed = True
 
             if critique.critic_type == "experience" and day.day_number in critique.affected_days:
-                # Add variety — replace one cultural with something different
-                cultural_exps = [s for s in day.experiences if s.experience.experience_type == "cultural"]
-                if len(cultural_exps) >= 3:
-                    to_replace = cultural_exps[-1]
-                    replacement = _find_replacement(
-                        to_replace.experience, unused, persona, "variety"
-                    )
+                # Introduce type variety when cultural experiences dominate
+                cultural = [s for s in day.experiences if s.experience.experience_type == "cultural"]
+                if len(cultural) >= 3:
+                    to_replace = cultural[-1]
+                    replacement = _find_replacement(to_replace.experience, unused, persona, "variety")
                     if replacement:
                         day.experiences.remove(to_replace)
-                        day.experiences.append(ScheduledExperience(
-                            experience=replacement,
-                            start_time=to_replace.start_time,
-                            end_time=to_replace.end_time,
-                            travel_time_from_prev=to_replace.travel_time_from_prev,
-                            travel_mode=to_replace.travel_mode,
-                        ))
+                        day.experiences.append(replacement)
                         unused.remove(replacement)
+                        changed = True
 
-        # Recalculate day cost
-        day.total_cost = sum(s.experience.cost_euros for s in day.experiences)
+        if changed:
+            revised_day_numbers.add(day.day_number)
 
-    # Update total
+    # Rebuild timing for every day that was modified.
+    # Swapped experiences inherit wrong start/end times from the original slot —
+    # the only correct fix is to re-run the full scheduling pass.
+    if revised_day_numbers:
+        from src.agents.nodes.assembler import _build_day_schedule
+
+        for i, day in enumerate(itinerary.days):
+            if day.day_number not in revised_day_numbers:
+                continue
+            raw_experiences = [s if hasattr(s, "location") else s.experience for s in day.experiences]
+            # day.experiences may contain mixed types after the swaps above —
+            # normalise to plain Experience objects
+            from src.models.experience import Experience
+            exps = [e if isinstance(e, Experience) else e.experience for e in day.experiences]
+            weather_dict = day.weather.model_dump() if day.weather else {}
+            itinerary.days[i] = _build_day_schedule(
+                exps, persona, day.day_number, persona.trip_days, weather_dict
+            )
+
     itinerary.total_cost = sum(d.total_cost for d in itinerary.days)
     itinerary.revision_count = state.get("revision_count", 0) + 1
 
     state["itinerary"] = itinerary
     state["revision_count"] = itinerary.revision_count
-    state["log"].append(f"🔄 Revision {itinerary.revision_count} complete")
+    state["log"].append(f"🔄 Revision {itinerary.revision_count} complete ({len(revised_day_numbers)} days rebuilt)")
 
     return state
 
 
 def _find_replacement(original, unused, persona, strategy):
-    """Find a replacement experience based on strategy."""
+    """Return the best unused replacement experience for a given strategy."""
     if not unused:
         return None
 
@@ -116,12 +123,8 @@ def _find_replacement(original, unused, persona, strategy):
         candidates = [e for e in unused if e.local_score > original.local_score + 1]
         candidates.sort(key=lambda e: e.local_score, reverse=True)
     elif strategy == "variety":
-        non_cultural = [e for e in unused if e.experience_type not in ("cultural",)]
-        candidates = non_cultural
+        candidates = [e for e in unused if e.experience_type != "cultural"]
     else:
         candidates = unused
 
-    if not candidates:
-        return None
-
-    return candidates[0]
+    return candidates[0] if candidates else None

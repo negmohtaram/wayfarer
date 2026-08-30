@@ -2,7 +2,7 @@ import logging
 
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
-from src.agents.llm import get_llm
+from src.agents.llm import call_with_retry, get_llm
 from src.agents.state import PlanningState
 from src.agents.tools.search import web_search
 
@@ -28,11 +28,11 @@ async def enrichment_node(state: PlanningState) -> PlanningState:
     state.setdefault("log", [])
     state["log"].append("🔍 Enriching top experiences with live search...")
 
-    # Only enrich top 3 — keeps latency low and avoids rate limits
     top = experience_pool[:3]
     llm_with_tools = get_llm(temperature=0).bind_tools([web_search])
     summarizer = get_llm(temperature=0)
 
+    enriched = 0
     for exp in top:
         try:
             messages = [
@@ -46,33 +46,31 @@ async def enrichment_node(state: PlanningState) -> PlanningState:
                 ),
             ]
 
-            # Step 1: ask the LLM — it may respond with a tool_call
-            response = await llm_with_tools.ainvoke(messages)
+            response = await call_with_retry(llm_with_tools.ainvoke, messages)
 
             if not response.tool_calls:
-                # LLM chose not to search — nothing to update
                 continue
 
-            # Step 2: execute the tool the LLM requested
             tool_call = response.tool_calls[0]
             search_result = await web_search.ainvoke(tool_call["args"])
 
-            # Step 3: give the LLM the search result so it can synthesize an answer
-            messages.append(response)  # the AIMessage that contained tool_calls
+            messages.append(response)
             messages.append(ToolMessage(
                 content=str(search_result),
                 tool_call_id=tool_call["id"],
             ))
-            final = await summarizer.ainvoke(messages)
+            final = await call_with_retry(summarizer.ainvoke, messages)
 
             update = final.content.strip()
             if update and len(update) > 20:
                 exp.practical_tips = exp.practical_tips + f"\n\n[Current info, 2026]: {update[:400]}"
+                enriched += 1
 
         except Exception as e:
             logger.warning("Enrichment failed for '%s': %s", exp.name, e)
+            state["log"].append(f"⚠️  Live data unavailable for '{exp.name}' — using curated info")
             continue
 
     state["experience_pool"] = experience_pool
-    state["log"].append(f"🔍 Live enrichment done for top {len(top)} experiences")
+    state["log"].append(f"🔍 Live enrichment done ({enriched}/{len(top)} experiences updated)")
     return state

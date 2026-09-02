@@ -71,11 +71,11 @@ def route_after_critique(state: PlanningState) -> str:
 
     from src.config import MAX_REVISION_CYCLES
     if revision_count >= MAX_REVISION_CYCLES:
-        return "regret_minimizer"
+        return "highlight_ranker"
 
     # Check if any critic rejected
     needs_revision = any(c.verdict in ("revise", "reject_day") for c in critiques)
 
     if needs_revision:
         return "revision_agent"
-    return "regret_minimizer"
+    return "highlight_ranker"

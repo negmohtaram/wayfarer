@@ -1,5 +1,9 @@
 from src.models.itinerary import Itinerary, CritiqueResult
-from src.optimization.energy import build_energy_curve, get_energy_at_time
+from src.optimization.energy import build_energy_curve, get_energy_at_time, time_to_minutes
+
+# An experience is considered energy-mismatched if it demands more than this
+# many units above the traveler's available energy at that time.
+ENERGY_MISMATCH_THRESHOLD = 3.0
 
 
 async def energy_critic(itinerary: Itinerary) -> CritiqueResult:
@@ -16,7 +20,6 @@ async def energy_critic(itinerary: Itinerary) -> CritiqueResult:
         if total_experiences == 0:
             continue
 
-        # Check if pace is appropriate
         if persona.pace >= 7 and total_experiences > 4:
             issues.append(
                 f"Day {day.day_number}: {total_experiences} experiences is too many for a slow-paced traveler"
@@ -31,31 +34,42 @@ async def energy_critic(itinerary: Itinerary) -> CritiqueResult:
             suggestions.append(f"Day {day.day_number}: Add 1-2 more experiences")
             score -= 0.5
 
-        # Check high-energy activities aren't scheduled during known low-energy slots
         for sched in day.experiences:
             exp = sched.experience
             traveler_energy = get_energy_at_time(sched.start_time, curve)
-            energy_mismatch = exp.energy_required - traveler_energy
 
-            # Post-lunch dip: 12-14h is low energy for most
-            from src.optimization.energy import time_to_minutes
-            start_min = time_to_minutes(sched.start_time)
-            if 720 <= start_min <= 840 and exp.energy_required >= 7:  # 12-14h, high energy activity
+            # Flag experiences that demand significantly more energy than the
+            # traveler has available at that time.
+            energy_mismatch = exp.energy_required - traveler_energy
+            if energy_mismatch > ENERGY_MISMATCH_THRESHOLD:
                 issues.append(
-                    f"Day {day.day_number}: High-energy '{exp.name}' scheduled during typical post-lunch dip (12-2pm)"
+                    f"Day {day.day_number}: '{exp.name}' requires energy {exp.energy_required:.0f}/10 "
+                    f"but traveler energy at {sched.start_time} is {traveler_energy:.0f}/10"
+                )
+                suggestions.append(f"Move '{exp.name}' to a time when traveler energy is higher")
+                score -= 0.8
+                if day.day_number not in affected_days:
+                    affected_days.append(day.day_number)
+
+            # Post-lunch dip: 12-14h is low energy for most profiles
+            start_min = time_to_minutes(sched.start_time)
+            if 720 <= start_min <= 840 and exp.energy_required >= 7:
+                issues.append(
+                    f"Day {day.day_number}: High-energy '{exp.name}' scheduled during "
+                    f"typical post-lunch dip (12-2pm)"
                 )
                 suggestions.append(f"Move '{exp.name}' to morning or late afternoon")
                 score -= 1.0
                 if day.day_number not in affected_days:
                     affected_days.append(day.day_number)
 
-        # Check physical constraints respected
         if persona.physical_constraints:
             for sched in day.experiences:
                 exp = sched.experience
                 if "bad_knee" in persona.physical_constraints and exp.physical_intensity == "high":
                     issues.append(
-                        f"Day {day.day_number}: '{exp.name}' has high physical intensity but traveler has bad knee"
+                        f"Day {day.day_number}: '{exp.name}' has high physical intensity "
+                        f"but traveler has bad knee"
                     )
                     score -= 2.0
                     if day.day_number not in affected_days:

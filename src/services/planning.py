@@ -49,7 +49,7 @@ async def stream_planning(session_id: str, persona: TravelerPersona) -> AsyncGen
                                 "critic": critique.critic_type,
                             })
 
-            if node_name == "regret_minimizer":
+            if node_name == "highlight_ranker":
                 itinerary = node_state.get("itinerary")
                 if itinerary and hasattr(itinerary, "model_dump"):
                     itin_data = itinerary.model_dump()

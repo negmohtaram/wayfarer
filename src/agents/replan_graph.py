@@ -1,14 +1,29 @@
 import asyncio
 import logging
+from typing import Literal
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
+from pydantic import BaseModel, Field
+
 from src.agents.state import ReplanningState
 
 logger = logging.getLogger(__name__)
 
 
+class DisruptionAnalysis(BaseModel):
+    disruption_type: Literal["weather", "closed", "delay", "tired", "love_neighborhood", "other"]
+    affected_experiences: list[str] = Field(default_factory=list)
+    recommendation: str = ""
+
+
 async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
-    """Classify the disruption and store the result so the assembler can act on it."""
+    """Classify the disruption using structured LLM output.
+
+    Uses with_structured_output so the LLM is forced to return a valid
+    DisruptionAnalysis — no regex, no manual JSON parsing.
+    Falls back to an empty analysis dict on failure.
+    """
     from src.agents.llm import call_with_retry, get_llm
 
     state.setdefault("log", [])
@@ -29,35 +44,26 @@ async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
         state["log"].append("No remaining days to replan")
         return state
 
-    llm = get_llm(temperature=0.5)
-
     day_summary = "\n".join(
         f"Day {d.day_number}: " + ", ".join(s.experience.name for s in d.experiences)
         for d in remaining_days
     )
 
-    prompt = f"""
-You are a travel replanner. A traveler reported: "{disruption}"
+    messages = [
+        SystemMessage(
+            "You are a travel replanner. Classify the traveler's disruption and identify "
+            "which scheduled experiences are affected."
+        ),
+        HumanMessage(
+            f'Traveler reported: "{disruption}"\n\nRemaining schedule:\n{day_summary}'
+        ),
+    ]
 
-Remaining schedule:
-{day_summary}
-
-Respond in JSON only:
-{{
-  "disruption_type": "weather|closed|delay|tired|love_neighborhood|other",
-  "affected_experiences": ["list of experience names affected"],
-  "recommendation": "brief recommendation for the replanner"
-}}
-"""
-
-    import json, re
     try:
-        response = await call_with_retry(llm.ainvoke, [{"role": "user", "content": prompt}])
-        json_match = re.search(r"\{.*\}", response.content, re.DOTALL)
-        if json_match:
-            analysis = json.loads(json_match.group(0))
-            state["disruption_analysis"] = analysis
-            state["log"].append(f"🔄 Disruption classified as: {analysis.get('disruption_type', 'other')}")
+        llm = get_llm(temperature=0.3).with_structured_output(DisruptionAnalysis)
+        result: DisruptionAnalysis = await call_with_retry(llm.ainvoke, messages)
+        state["disruption_analysis"] = result.model_dump()
+        state["log"].append(f"🔄 Disruption classified as: {result.disruption_type}")
     except Exception as e:
         logger.warning("Disruption analysis failed: %s", e)
         state["disruption_analysis"] = {}
@@ -170,7 +176,7 @@ async def replan_assembler_node(state: ReplanningState) -> ReplanningState:
         day_exps = day_clusters[i] if i < len(day_clusters) else []
         routed = optimize_route(day_exps)
         sequenced = sequence_by_energy(routed, persona, get_day_start_time(persona))
-        weather = weather_list[i] if i < len(weather_list) else {}
+        weather = weather_list[i] if i < len(weather_list) else None
         new_day = _build_day_schedule(sequenced, persona, day_number, persona.trip_days, weather)
 
         for j, day in enumerate(itinerary.days):

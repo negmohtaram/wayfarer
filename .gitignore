@@ -29,3 +29,5 @@ data/
 .idea/
 *.swp
 *.swo
+sse_consumer.py
+.pytest_cache/

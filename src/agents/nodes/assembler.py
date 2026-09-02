@@ -20,8 +20,12 @@ ARC_LABELS = {
 FINAL_DAY_LABEL = ("The Farewell Day", "End on a high. See something beautiful. Buy nothing. Leave full.")
 
 
-async def fetch_weather(city: str, start_date: str, days: int) -> list[dict]:
-    """Fetch weather from Open-Meteo API (free, no key required)."""
+async def fetch_weather(city: str, start_date: str, days: int) -> list[dict | None]:
+    """Fetch weather from Open-Meteo API (free, no key required).
+
+    Returns a list of dicts (one per day) or None entries when data is
+    unavailable. Callers must handle None explicitly — no fabricated fallback.
+    """
     raw = get_city_coordinates(city.lower())
     coords = (raw[0], raw[1]) if raw and len(raw) >= 2 else (52.3676, 4.9041)
 
@@ -42,24 +46,22 @@ async def fetch_weather(city: str, start_date: str, days: int) -> list[dict]:
                 daily = data.get("daily", {})
                 result = []
                 for i in range(days):
-                    wcode = daily.get("weathercode", [0] * days)[i] if i < len(daily.get("weathercode", [])) else 0
-                    condition = _wmo_to_condition(wcode)
+                    wcode = daily.get("weathercode", [])[i] if i < len(daily.get("weathercode", [])) else None
+                    if wcode is None:
+                        result.append(None)
+                        continue
                     result.append({
-                        "date": daily.get("time", [""] * days)[i] if i < len(daily.get("time", [])) else "",
-                        "condition": condition,
-                        "temp_high": daily.get("temperature_2m_max", [20] * days)[i] if i < len(daily.get("temperature_2m_max", [])) else 20,
-                        "temp_low": daily.get("temperature_2m_min", [12] * days)[i] if i < len(daily.get("temperature_2m_min", [])) else 12,
-                        "rain_probability": daily.get("precipitation_probability_max", [0] * days)[i] if i < len(daily.get("precipitation_probability_max", [])) else 0,
+                        "date": daily.get("time", [])[i] if i < len(daily.get("time", [])) else "",
+                        "condition": _wmo_to_condition(wcode),
+                        "temp_high": daily.get("temperature_2m_max", [])[i] if i < len(daily.get("temperature_2m_max", [])) else None,
+                        "temp_low": daily.get("temperature_2m_min", [])[i] if i < len(daily.get("temperature_2m_min", [])) else None,
+                        "rain_probability": daily.get("precipitation_probability_max", [])[i] if i < len(daily.get("precipitation_probability_max", [])) else None,
                     })
                 return result
     except Exception:
         pass
 
-    # Fallback: dummy weather
-    return [
-        {"date": "", "condition": "partly_cloudy", "temp_high": 18, "temp_low": 11, "rain_probability": 20}
-        for _ in range(days)
-    ]
+    return [None] * days
 
 
 def _wmo_to_condition(code: int) -> str:
@@ -134,7 +136,7 @@ def _build_day_schedule(
     persona: TravelerPersona,
     day_number: int,
     total_days: int,
-    weather: dict,
+    weather: dict | None,
 ) -> DayPlan:
     start_minutes = get_day_start_time(persona)
 
@@ -189,17 +191,28 @@ def _build_day_schedule(
 
     arc_label, arc_desc = _get_arc_for_day(day_number, total_days)
 
-    weather_forecast = WeatherForecast(
-        date=weather.get("date", ""),
-        condition=weather.get("condition", "partly_cloudy"),
-        temp_high=weather.get("temp_high", 18),
-        temp_low=weather.get("temp_low", 10),
-        rain_probability=weather.get("rain_probability", 20),
-    )
+    if weather:
+        weather_forecast = WeatherForecast(
+            date=weather.get("date", ""),
+            condition=weather.get("condition", "unknown"),
+            temp_high=weather.get("temp_high") or 0.0,
+            temp_low=weather.get("temp_low") or 0.0,
+            rain_probability=weather.get("rain_probability") or 0.0,
+            available=True,
+        )
+    else:
+        weather_forecast = WeatherForecast(
+            date="",
+            condition="unknown",
+            temp_high=0.0,
+            temp_low=0.0,
+            rain_probability=0.0,
+            available=False,
+        )
 
     return DayPlan(
         day_number=day_number,
-        date=weather.get("date", ""),
+        date=weather.get("date", "") if weather else "",
         arc_label=arc_label,
         arc_description=arc_desc,
         experiences=scheduled,
@@ -232,7 +245,7 @@ async def assembler_node(state: PlanningState) -> PlanningState:
         day_num = day_idx + 1
         weather = weather_list[day_idx] if day_idx < len(weather_list) else {}
         day_plan = _build_day_schedule(day_exps, persona, day_num, persona.trip_days, weather)
-        if weather.get("date"):
+        if weather and weather.get("date"):
             day_plan.date = weather["date"]
         else:
             trip_date = datetime.fromisoformat(start_date) + timedelta(days=day_idx)

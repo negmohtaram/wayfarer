@@ -1,9 +1,18 @@
+import logging
+
 from src.agents.state import PlanningState
 from src.models.itinerary import CritiqueResult
+from src.models.experience import Experience
+
+logger = logging.getLogger(__name__)
 
 
 async def revision_agent_node(state: PlanningState) -> PlanningState:
-    """Apply critic feedback and regenerate weak days."""
+    """Apply critic feedback with deterministic repair strategies.
+
+    Each critic type has an explicit repair path or an explicit log entry
+    explaining why it cannot be repaired in this pass.
+    """
     state.setdefault("log", [])
     state["log"].append("🔄 Revision agent applying critic feedback...")
 
@@ -15,7 +24,6 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
         state["revision_count"] = state.get("revision_count", 0) + 1
         return state
 
-    # Collect affected days across all critics (skip "error" verdicts)
     days_to_revise: set[int] = set()
     for critique in critiques:
         if critique.verdict in ("revise", "reject_day"):
@@ -30,7 +38,6 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
     state["log"].append(f"🔄 Revising days: {sorted(days_to_revise)}")
 
-    # Track which experiences are in use
     used_ids: set[str] = set()
     for day in itinerary.days:
         for sched in day.experiences:
@@ -52,14 +59,14 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
             if critique.verdict in ("approve", "error"):
                 continue
 
+            # ── Energy: trim overloaded days for slow travelers ──────────────
             if critique.critic_type == "energy":
-                # Trim to 3 experiences for slow-paced travelers who are overloaded
                 if persona.pace >= 7 and len(day.experiences) > 4:
                     day.experiences = day.experiences[:3]
                     changed = True
 
-            if critique.critic_type == "authenticity" and day.day_number in critique.affected_days:
-                # Swap the lowest local-score experience for a more authentic one
+            # ── Authenticity: swap lowest local-score experience ─────────────
+            elif critique.critic_type == "authenticity" and day.day_number in critique.affected_days:
                 day.experiences.sort(key=lambda s: s.experience.local_score)
                 for sched in day.experiences[:1]:
                     replacement = _find_replacement(sched.experience, unused, persona, "local")
@@ -70,8 +77,8 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
                         used_ids.add(replacement.id)
                         changed = True
 
-            if critique.critic_type == "experience" and day.day_number in critique.affected_days:
-                # Introduce type variety when cultural experiences dominate
+            # ── Experience: introduce type variety ───────────────────────────
+            elif critique.critic_type == "experience" and day.day_number in critique.affected_days:
                 cultural = [s for s in day.experiences if s.experience.experience_type == "cultural"]
                 if len(cultural) >= 3:
                     to_replace = cultural[-1]
@@ -81,23 +88,46 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
                         day.experiences.append(replacement)
                         unused.remove(replacement)
                         changed = True
+                else:
+                    logger.debug(
+                        "Day %d: experience critic requested revision but no actionable fix available "
+                        "(fewer than 3 cultural experiences to swap)",
+                        day.day_number,
+                    )
+
+            # ── Budget: remove most expensive experience ─────────────────────
+            elif critique.critic_type == "budget" and day.day_number in critique.affected_days:
+                if day.experiences:
+                    most_expensive = max(day.experiences, key=lambda s: s.experience.cost_euros)
+                    if most_expensive.experience.cost_euros > 0:
+                        day.experiences.remove(most_expensive)
+                        changed = True
+
+            # ── Logistics: rebuild day schedule to fix timing violations ─────
+            # Travel-distance issues require re-clustering and cannot be fixed
+            # by a schedule rebuild alone — those are logged but not repaired.
+            elif critique.critic_type == "logistics" and day.day_number in critique.affected_days:
+                timing_issues = [i for i in critique.issues if "scheduled at" in i]
+                if timing_issues:
+                    changed = True  # mark for rebuild — _build_day_schedule re-sorts by time window
+
+                travel_issues = [i for i in critique.issues if "Long travel" in i]
+                if travel_issues:
+                    state["log"].append(
+                        f"⚠️  Day {day.day_number}: travel-distance issues require re-clustering "
+                        f"— not repaired in this pass"
+                    )
 
         if changed:
             revised_day_numbers.add(day.day_number)
 
-    # Rebuild timing for every day that was modified.
-    # Swapped experiences inherit wrong start/end times from the original slot —
-    # the only correct fix is to re-run the full scheduling pass.
+    # Rebuild full schedule for every modified day
     if revised_day_numbers:
         from src.agents.nodes.assembler import _build_day_schedule
 
         for i, day in enumerate(itinerary.days):
             if day.day_number not in revised_day_numbers:
                 continue
-            raw_experiences = [s if hasattr(s, "location") else s.experience for s in day.experiences]
-            # day.experiences may contain mixed types after the swaps above —
-            # normalise to plain Experience objects
-            from src.models.experience import Experience
             exps = [e if isinstance(e, Experience) else e.experience for e in day.experiences]
             weather_dict = day.weather.model_dump() if day.weather else {}
             itinerary.days[i] = _build_day_schedule(
@@ -109,7 +139,9 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
     state["itinerary"] = itinerary
     state["revision_count"] = itinerary.revision_count
-    state["log"].append(f"🔄 Revision {itinerary.revision_count} complete ({len(revised_day_numbers)} days rebuilt)")
+    state["log"].append(
+        f"🔄 Revision {itinerary.revision_count} complete ({len(revised_day_numbers)} days rebuilt)"
+    )
 
     return state
 

@@ -2,19 +2,6 @@ from src.models.experience import Experience
 from src.models.persona import TravelerPersona
 
 
-TIME_SLOTS = [
-    ("06:00", "early_morning"),
-    ("08:00", "morning"),
-    ("10:00", "morning"),
-    ("12:00", "afternoon"),
-    ("14:00", "afternoon"),
-    ("16:00", "golden_hour"),
-    ("18:00", "golden_hour"),
-    ("20:00", "evening"),
-    ("22:00", "night"),
-]
-
-
 def build_energy_curve(energy_profile: str) -> dict[str, float]:
     """Returns energy level (0-10) at each time of day."""
     curves = {
@@ -38,12 +25,27 @@ def build_energy_curve(energy_profile: str) -> dict[str, float]:
 
 
 def time_to_minutes(t: str) -> int:
+    """Parse HH:MM to total minutes. Handles overflow times like '25:30'."""
     h, m = t.split(":")
     return int(h) * 60 + int(m)
 
 
 def minutes_to_time(m: int) -> str:
-    m = min(m, 23 * 60 + 59)  # clamp — scheduler catches overflows via logistics critic
+    """Convert raw minutes to HH:MM string. No clamping — overflow is intentional.
+
+    Values beyond 23:59 (e.g. 25:30) are valid internal representations of
+    schedules that cross midnight. The logistics critic detects these and flags
+    them. Clamping here would hide the overflow from validation.
+    Use format_time_hhmm() for display-only contexts where 23:59 is the ceiling.
+    """
+    h = m // 60
+    mins = m % 60
+    return f"{h:02d}:{mins:02d}"
+
+
+def format_time_hhmm(m: int) -> str:
+    """Clamp to 23:59 and format for display purposes only."""
+    m = min(m, 23 * 60 + 59)
     h = m // 60
     mins = m % 60
     return f"{h:02d}:{mins:02d}"
@@ -118,20 +120,3 @@ def get_day_start_time(persona: TravelerPersona) -> int:
         return 8 * 60  # 8am
 
 
-def time_of_day_for_slot(minutes_from_midnight: int) -> str:
-    """Returns time-of-day label for a given minute offset."""
-    hour = minutes_from_midnight // 60
-    if hour < 7:
-        return "early_morning"
-    elif hour < 10:
-        return "morning"
-    elif hour < 13:
-        return "morning"
-    elif hour < 17:
-        return "afternoon"
-    elif hour < 19:
-        return "golden_hour"
-    elif hour < 21:
-        return "evening"
-    else:
-        return "night"

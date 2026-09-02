@@ -6,10 +6,11 @@ from .persona import TravelerPersona
 
 class WeatherForecast(BaseModel):
     date: str
-    condition: str  # "sunny" | "cloudy" | "rainy" | "partly_cloudy"
+    condition: str  # "sunny" | "cloudy" | "rainy" | "partly_cloudy" | "unknown"
     temp_high: float
     temp_low: float
     rain_probability: float = 0.0
+    available: bool = True  # False when weather fetch failed — do not fabricate
 
 
 class DayPlan(BaseModel):

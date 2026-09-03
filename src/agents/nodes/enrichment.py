@@ -12,13 +12,16 @@ logger = logging.getLogger(__name__)
 async def enrichment_node(state: PlanningState) -> PlanningState:
     """Enrich the top-scored experiences with live web search data.
 
-    How tool calling works here:
-    1. We bind the search tool to the LLM so it knows the tool exists.
-    2. We ask the LLM to find current info about an experience.
-    3. The LLM responds with tool_calls instead of plain text — it's saying
-       "I want to call web_search with this query."
-    4. WE execute the actual search (the LLM never touches the internet directly).
-    5. We feed the result back as a ToolMessage and let the LLM summarize.
+    Not wired into the planning graph (removed in Phase 1 — adds prose
+    that no downstream decision consumes). Preserved here for Phase 2+
+    redesign as structured live-data retrieval.
+
+    How tool calling works:
+    1. Bind the search tool so the LLM knows the tool exists.
+    2. Ask the LLM to find current info about an experience.
+    3. LLM responds with tool_calls — it requests a search, not executes one.
+    4. We execute the actual search.
+    5. Feed the result back as a ToolMessage and let the LLM summarize.
     """
     experience_pool = state.get("experience_pool", [])
     persona = state.get("persona")

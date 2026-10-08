@@ -24,10 +24,15 @@ data/
 .AppleDouble
 .LSOverride
 
+# Local data and exports
+*.csv
+*.pdf
+
 # Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 sse_consumer.py
+eval_results/
 .pytest_cache/

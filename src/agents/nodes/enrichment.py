@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 async def enrichment_node(state: PlanningState) -> PlanningState:
     """Enrich the top-scored experiences with live web search data.
 
-    Not wired into the planning graph (removed in Phase 1 — adds prose
-    that no downstream decision consumes). Preserved here for Phase 2+
-    redesign as structured live-data retrieval.
+    Not wired into the planning graph: it adds prose that no downstream
+    decision uses. Kept for a later redesign as structured live-data
+    retrieval.
 
     How tool calling works:
     1. Bind the search tool so the LLM knows the tool exists.

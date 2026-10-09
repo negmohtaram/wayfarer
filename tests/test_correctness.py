@@ -1,4 +1,4 @@
-"""Phase 1 correctness tests.
+"""Correctness tests for the planning pipeline.
 
 Covers: time overflow, energy mismatch, weather unavailable state,
 disruption structured output, critic routing, budget repair,

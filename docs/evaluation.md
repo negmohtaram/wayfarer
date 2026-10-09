@@ -1,11 +1,9 @@
 # Wayfarer Evaluation Framework
 
-## Purpose
+## Why this exists
 
-This framework measures the current planner objectively before any architectural changes.
-The goal is a `baseline_v1` report that answers: **"How good is the current system, and where exactly does it fail?"**
-
-Do not optimize the planner based on these results until the baseline is documented.
+I want to know how good the current planner is, and where it fails, before I change its architecture.
+The first output is a `baseline_v1` report. Later versions of the planner are compared against it.
 
 ---
 
@@ -51,8 +49,8 @@ Each validator is a pure function and produces `ValidationResult` objects.
 
 ### Severity distinction
 
-**error** — the itinerary is unacceptable regardless of quality (hard constraint violated).
-**warning** — a concern worth tracking but not a blocking failure.
+**error**: the itinerary is unacceptable regardless of quality (hard constraint violated).
+**warning**: a concern worth tracking but not a blocking failure.
 
 `passed_all_hard_validators` in `EvaluationResult` is `True` only when all `error`-severity validators pass.
 
@@ -60,14 +58,14 @@ Each validator is a pure function and produces `ValidationResult` objects.
 
 `MUST_DO_SATISFIED` and `MUST_AVOID_RESPECTED` are always expected to fail on `baseline_v1`
 because the planner has no enforcement mechanism for these constraints.
-Scenarios that include these are tagged `expected_violation_codes` — the report separates them
+Scenarios that include these are tagged with `expected_violation_codes`, and the report lists them separately
 from unexpected failures under **known_unsupported_features**.
 
 ---
 
 ## Soft metrics
 
-All soft metrics are interpretable observations. None of them claim to measure "quality."
+Soft metrics are observations. None of them claims to measure quality on its own.
 
 | Metric | What it measures | Caveat |
 |---|---|---|
@@ -84,11 +82,11 @@ All soft metrics are interpretable observations. None of them claim to measure "
 
 The following were considered and rejected:
 
-- **Narrative coherence** — cannot be defined without an independent LLM judge, which would rerun the same model that produced the itinerary. Circular.
-- **Emotional arc quality** — same reason.
-- **Satisfaction score** — requires ground truth from actual travelers.
+- **Narrative coherence.** It needs an independent LLM judge, and using the same model that wrote the itinerary would be circular.
+- **Emotional arc quality.** Same problem.
+- **Satisfaction score.** It needs ground truth from real travelers.
 
-If a metric cannot be defined defensibly, it is not included.
+A metric I can't define clearly is left out.
 
 ---
 
@@ -125,7 +123,7 @@ eval_results/
     └── {scenario_id}_{timestamp}.json  # one EvaluationResult per run
 ```
 
-`eval_results/` is gitignored — results are local only.
+`eval_results/` is gitignored, so results stay local.
 
 ---
 
@@ -146,7 +144,7 @@ eval_results/
 | Budget stress | 3 | ultra-low, budget vs slow pace, typical reference |
 | Injected weather | 4 | all rainy, mixed, unavailable, all sunny |
 | Disruption | 5 | weather, closed, tired, love_neighborhood, delayed start |
-| Must-do/avoid | 2 | expected failures — document planner gaps |
+| Must-do/avoid | 2 | expected failures that document planner gaps |
 | Edge cases | 6 | combined constraints, extreme personas, reference scenarios |
 
 ---
@@ -155,8 +153,8 @@ eval_results/
 
 Replay re-runs the planning graph with the same persona and injected weather
 (stored in `input_snapshot`). The LLM experience critic is still live, so soft
-metrics and critic scores may differ slightly between runs. This variance is
-intentional — it reveals LLM non-determinism at `temperature=0.7`.
+metrics and critic scores may differ slightly between runs. That variance is
+expected at `temperature=0.7`, and it shows how much the LLM moves the numbers.
 
 To compare two runs of the same scenario, look at hard validator results
 (deterministic) separately from soft metrics (may vary).
@@ -201,7 +199,7 @@ SCENARIO_BY_ID[MY_SCENARIO.id] = MY_SCENARIO
 
 ---
 
-## Stop condition
+## Next
 
-Stop after `baseline_v1` is measured. Do not optimize the planner based on these
-results until the report is committed and reviewed.
+Run the full scenario set against a live model and commit the `baseline_v1` report.
+Planner changes are measured against that report.

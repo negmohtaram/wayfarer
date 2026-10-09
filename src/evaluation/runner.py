@@ -46,7 +46,7 @@ async def run_scenario(scenario, version: str = PLANNER_VERSION) -> EvaluationRe
     planning_error = None
 
     if scenario.disruption:
-        # Phase 1: run planning to get a base itinerary
+        # Step 1: run planning to get a base itinerary
         state: PlanningState = {
             "session_id": session_id,
             "persona": scenario.persona,
@@ -72,7 +72,7 @@ async def run_scenario(scenario, version: str = PLANNER_VERSION) -> EvaluationRe
 
         initial_itinerary_dict = initial_itinerary.model_dump()
 
-        # Phase 2: run replanning
+        # Step 2: run replanning
         output_itinerary, replan_metrics = await run_replanning(
             initial_itinerary=initial_itinerary,
             disruption_message=scenario.disruption.message,

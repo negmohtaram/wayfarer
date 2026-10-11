@@ -25,7 +25,7 @@ def build_planning_graph():
     graph.add_conditional_edges(
         "critic_panel",
         route_after_critique,
-        {"revision_agent": "revision_agent", "regret_minimizer": "highlight_ranker"},
+        {"revision_agent": "revision_agent", "highlight_ranker": "highlight_ranker"},
     )
     graph.add_edge("revision_agent", "critic_panel")
     graph.add_edge("highlight_ranker", END)

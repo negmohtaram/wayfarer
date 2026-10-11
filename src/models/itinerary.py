@@ -34,11 +34,11 @@ class CritiqueResult(BaseModel):
     affected_days: list[int] = Field(default_factory=list)
 
 
-class RegretItem(BaseModel):
+class HighlightItem(BaseModel):
     experience_name: str
     experience_id: str
     day_number: int
-    regret_score: float  # 0-10
+    highlight_score: float  # 0-10
     tier: str  # "must_do" | "should_do" | "nice_to_have"
     reason: str
 
@@ -49,7 +49,7 @@ class Itinerary(BaseModel):
     destination: str
     days: list[DayPlan] = Field(default_factory=list)
     critiques: list[CritiqueResult] = Field(default_factory=list)
-    regret_rankings: list[RegretItem] = Field(default_factory=list)
+    highlight_rankings: list[HighlightItem] = Field(default_factory=list)
     revision_count: int = 0
     total_cost: float = 0.0
     status: str = "planning"  # "planning" | "complete" | "replanning"

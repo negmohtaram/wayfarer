@@ -21,6 +21,17 @@ FINAL_DAY_LABEL = ("The Farewell Day", "End on a high. See something beautiful. 
 
 
 async def fetch_weather(city: str, start_date: str, days: int) -> list[dict | None]:
+    """Weather for each trip day; recorded/replayed in evaluation like model calls."""
+    from src.evaluation.recording import active
+
+    recorder = active()
+    if recorder is not None:
+        meta = {"site": "weather", "city": city.lower(), "start_date": start_date, "days": days}
+        return await recorder.call(meta, None, lambda: _fetch_weather_live(city, start_date, days))
+    return await _fetch_weather_live(city, start_date, days)
+
+
+async def _fetch_weather_live(city: str, start_date: str, days: int) -> list[dict | None]:
     """Fetch weather from Open-Meteo API (free, no key required).
 
     Returns a list of dicts (one per day) or None entries when data is

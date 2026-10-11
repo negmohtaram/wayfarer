@@ -22,9 +22,27 @@ async def call_with_retry(
     *args: Any,
     max_attempts: int = 3,
     base_delay: float = 1.0,
+    meta: dict | None = None,
     **kwargs: Any,
 ) -> Any:
-    """Call an async LLM function with exponential backoff on transient failures."""
+    """Call an async LLM function with exponential backoff on transient failures.
+
+    meta identifies the call (site, model, temperature, output schema). When a recorder is
+    active (evaluation), the call is recorded or replayed; a call without meta is refused so
+    no model call can escape recording.
+    """
+    from src.evaluation.recording import active
+
+    recorder = active()
+    if recorder is not None:
+        if meta is None:
+            raise ValueError("model call without meta while recording: add meta at the call site")
+        messages = args[0] if args else kwargs.get("input")
+        return await recorder.call(meta, messages, lambda: _retry(fn, args, kwargs, max_attempts, base_delay))
+    return await _retry(fn, args, kwargs, max_attempts, base_delay)
+
+
+async def _retry(fn, args, kwargs, max_attempts, base_delay):
     for attempt in range(max_attempts):
         try:
             return await fn(*args, **kwargs)

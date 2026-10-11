@@ -1,6 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agents.llm import call_with_retry, get_llm
+from src.config import GROQ_MODEL
 from src.models.itinerary import CritiqueResult, Itinerary
 
 
@@ -57,7 +58,10 @@ List specific issues and concrete suggestions. affected_days should be day numbe
             SystemMessage("You are a precise travel itinerary critic. Return structured evaluations."),
             HumanMessage(prompt),
         ]
-        result = await call_with_retry(llm.ainvoke, messages)
+        result = await call_with_retry(
+            llm.ainvoke, messages,
+            meta={"site": "experience_critic", "model": GROQ_MODEL, "temperature": 0.3, "schema": "CritiqueResult"},
+        )
         return result
     except Exception:
         return _fallback_critique(itinerary)

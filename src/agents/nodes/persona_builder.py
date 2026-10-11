@@ -1,6 +1,7 @@
 import json
 import re
 from src.agents.llm import call_with_retry, get_llm
+from src.config import GROQ_MODEL
 from src.agents.state import PlanningState
 from src.models.persona import TravelerPersona
 
@@ -95,7 +96,10 @@ async def run_persona_turn(
 
     messages.append({"role": "user", "content": context_msg})
 
-    response = await call_with_retry(llm.ainvoke, messages)
+    response = await call_with_retry(
+        llm.ainvoke, messages,
+        meta={"site": "persona_builder", "model": GROQ_MODEL, "temperature": 0.8, "schema": None},
+    )
     content = response.content
 
     # Extract JSON from response

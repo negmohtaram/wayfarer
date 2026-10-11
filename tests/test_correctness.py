@@ -247,8 +247,28 @@ def test_graph_has_highlight_ranker_not_regret_minimizer():
     assert "regret_minimizer" not in nodes, "regret_minimizer should be removed"
 
 
+def test_every_route_after_critique_exists_in_the_graph():
+    """Each answer the router can give must be a key in the routing table, or LangGraph raises."""
+    from src.agents.graph import planning_graph
+    from src.agents.nodes.critic_panel import route_after_critique
+    from src.config import MAX_REVISION_CYCLES
+    from src.models.itinerary import CritiqueResult
+
+    def state(verdict, revisions=0):
+        return {"critiques": [CritiqueResult(critic_type="experience", score=7, verdict=verdict)],
+                "revision_count": revisions}
+
+    routes = {route_after_critique(s) for s in (
+        state("approve"), state("revise"), state("reject_day"),
+        state("revise", revisions=MAX_REVISION_CYCLES),
+    )}
+    table = planning_graph.builder.branches["critic_panel"]["route_after_critique"].ends
+    assert routes == {"highlight_ranker", "revision_agent"}
+    assert routes <= set(table), f"routes missing from the graph: {routes - set(table)}"
+
+
 def test_highlight_ranker_populates_rankings():
-    """highlight_ranker_node fills itinerary.regret_rankings."""
+    """highlight_ranker_node fills itinerary.highlight_rankings."""
     from src.agents.nodes.highlight_ranker import highlight_ranker_node
 
     persona = make_persona()
@@ -260,7 +280,7 @@ def test_highlight_ranker_populates_rankings():
     state = {"itinerary": itinerary, "log": []}
     result = asyncio.run(highlight_ranker_node(state))
 
-    rankings = result["itinerary"].regret_rankings
+    rankings = result["itinerary"].highlight_rankings
     assert len(rankings) == 1
     assert rankings[0].experience_name == "Test Exp"
     assert rankings[0].tier in ("must_do", "should_do", "nice_to_have")

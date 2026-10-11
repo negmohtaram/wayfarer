@@ -25,8 +25,8 @@ class Experience(BaseModel):
 
     # Scoring result (set by scoring engine)
     persona_score: Optional[float] = None
-    regret_score: Optional[float] = None
-    regret_tier: Optional[str] = None  # "must_do" | "should_do" | "nice_to_have"
+    highlight_score: Optional[float] = None
+    highlight_tier: Optional[str] = None  # "must_do" | "should_do" | "nice_to_have"
 
 
 class ScheduledExperience(BaseModel):

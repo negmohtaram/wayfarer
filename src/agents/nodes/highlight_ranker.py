@@ -1,5 +1,5 @@
 from src.agents.state import PlanningState
-from src.models.itinerary import RegretItem
+from src.models.itinerary import HighlightItem
 
 
 HIGHLIGHT_THRESHOLDS = {
@@ -73,21 +73,21 @@ async def highlight_ranker_node(state: PlanningState) -> PlanningState:
 
             reason = _build_highlight_reason(exp, highlight_score, tier, persona)
 
-            exp.regret_score = round(highlight_score, 1)
-            exp.regret_tier = tier
+            exp.highlight_score = round(highlight_score, 1)
+            exp.highlight_tier = tier
 
-            ranked_items.append(RegretItem(
+            ranked_items.append(HighlightItem(
                 experience_name=exp.name,
                 experience_id=exp.id,
                 day_number=day.day_number,
-                regret_score=round(highlight_score, 1),
+                highlight_score=round(highlight_score, 1),
                 tier=tier,
                 reason=reason,
             ))
 
-    ranked_items.sort(key=lambda r: r.regret_score, reverse=True)
+    ranked_items.sort(key=lambda r: r.highlight_score, reverse=True)
 
-    itinerary.regret_rankings = ranked_items
+    itinerary.highlight_rankings = ranked_items
     itinerary.status = "complete"
     state["itinerary"] = itinerary
 

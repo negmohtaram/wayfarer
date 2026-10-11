@@ -268,7 +268,7 @@ def test_every_route_after_critique_exists_in_the_graph():
 
 
 def test_highlight_ranker_populates_rankings():
-    """highlight_ranker_node fills itinerary.regret_rankings."""
+    """highlight_ranker_node fills itinerary.highlight_rankings."""
     from src.agents.nodes.highlight_ranker import highlight_ranker_node
 
     persona = make_persona()
@@ -280,7 +280,7 @@ def test_highlight_ranker_populates_rankings():
     state = {"itinerary": itinerary, "log": []}
     result = asyncio.run(highlight_ranker_node(state))
 
-    rankings = result["itinerary"].regret_rankings
+    rankings = result["itinerary"].highlight_rankings
     assert len(rankings) == 1
     assert rankings[0].experience_name == "Test Exp"
     assert rankings[0].tier in ("must_do", "should_do", "nice_to_have")

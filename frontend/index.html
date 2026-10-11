@@ -597,8 +597,8 @@
     color: var(--text-muted);
   }
 
-  /* Regret badges */
-  .regret-badge {
+  /* Highlight badges */
+  .highlight-badge {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -607,9 +607,9 @@
     font-size: 10px;
     font-weight: 600;
   }
-  .regret-must { background: rgba(248,113,113,0.2); color: #f87171; }
-  .regret-should { background: rgba(251,191,36,0.2); color: #fbbf24; }
-  .regret-nice { background: rgba(74,222,128,0.2); color: #4ade80; }
+  .highlight-must { background: rgba(248,113,113,0.2); color: #f87171; }
+  .highlight-should { background: rgba(251,191,36,0.2); color: #fbbf24; }
+  .highlight-nice { background: rgba(74,222,128,0.2); color: #4ade80; }
 
   /* Expand section */
   .exp-expanded {
@@ -672,30 +672,30 @@
   .empty-title { font-size: 16px; color: var(--text-dim); }
   .empty-sub { font-size: 13px; color: var(--text-muted); max-width: 240px; line-height: 1.6; }
 
-  /* Regret summary bar */
-  .regret-summary {
+  /* Highlight summary bar */
+  .highlight-summary {
     background: var(--navy-3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px;
     margin: 16px;
   }
-  .regret-summary h4 {
+  .highlight-summary h4 {
     font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
     color: var(--text-dim);
     margin-bottom: 10px;
   }
-  .regret-tier-row {
+  .highlight-tier-row {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 6px;
     font-size: 12px;
   }
-  .regret-tier-label { color: var(--text-dim); min-width: 100px; }
-  .regret-names { color: var(--text); line-height: 1.4; }
+  .highlight-tier-label { color: var(--text-dim); min-width: 100px; }
+  .highlight-names { color: var(--text); line-height: 1.4; }
 
   /* Map popup */
   .leaflet-popup-content-wrapper {
@@ -1314,13 +1314,13 @@ function renderMap(itinerary) {
         popupAnchor: [0, -16],
       });
 
-      const regretEmoji = exp.regret_tier === 'must_do' ? '🔴' :
-                          exp.regret_tier === 'should_do' ? '🟡' : '🟢';
+      const highlightEmoji = exp.highlight_tier === 'must_do' ? '🔴' :
+                          exp.highlight_tier === 'should_do' ? '🟡' : '🟢';
 
       const marker = L.marker([lat, lng], { icon })
         .bindPopup(`
           <div class="popup-exp-name">${exp.name}</div>
-          <div class="popup-time">⏰ ${sched.start_time} – ${sched.end_time} &nbsp; ${regretEmoji}</div>
+          <div class="popup-time">⏰ ${sched.start_time} – ${sched.end_time} &nbsp; ${highlightEmoji}</div>
           ${exp.cost_euros > 0 ? `<div class="popup-time">💶 €${exp.cost_euros}</div>` : ''}
           <div class="popup-desc">${exp.description?.substring(0, 120)}...</div>
         `)
@@ -1435,28 +1435,28 @@ function renderItinerary(itinerary) {
   document.getElementById('total-cost-display').innerHTML =
     `${itinerary.destination?.toUpperCase()} · ${itinerary.days?.length || 0} days · <strong style="color:var(--gold);">€${totalCost.toFixed(0)} total</strong>`;
 
-  // Build regret summary
-  const rankings = itinerary.regret_rankings || [];
+  // Build highlight summary
+  const rankings = itinerary.highlight_rankings || [];
   const mustDo = rankings.filter(r => r.tier === 'must_do').map(r => r.experience_name);
   const shouldDo = rankings.filter(r => r.tier === 'should_do').map(r => r.experience_name);
   const niceToHave = rankings.filter(r => r.tier === 'nice_to_have').map(r => r.experience_name);
 
-  let regretHtml = '';
+  let highlightHtml = '';
   if (rankings.length > 0) {
-    regretHtml = `
-      <div class="regret-summary">
-        <h4>Regret Minimizer</h4>
-        ${mustDo.length ? `<div class="regret-tier-row">
-          <span class="regret-tier-label">🔴 Must Do</span>
-          <span class="regret-names">${mustDo.join(', ')}</span>
+    highlightHtml = `
+      <div class="highlight-summary">
+        <h4>Highlights</h4>
+        ${mustDo.length ? `<div class="highlight-tier-row">
+          <span class="highlight-tier-label">🔴 Must Do</span>
+          <span class="highlight-names">${mustDo.join(', ')}</span>
         </div>` : ''}
-        ${shouldDo.length ? `<div class="regret-tier-row">
-          <span class="regret-tier-label">🟡 Should Do</span>
-          <span class="regret-names">${shouldDo.slice(0, 3).join(', ')}${shouldDo.length > 3 ? '...' : ''}</span>
+        ${shouldDo.length ? `<div class="highlight-tier-row">
+          <span class="highlight-tier-label">🟡 Should Do</span>
+          <span class="highlight-names">${shouldDo.slice(0, 3).join(', ')}${shouldDo.length > 3 ? '...' : ''}</span>
         </div>` : ''}
-        ${niceToHave.length ? `<div class="regret-tier-row">
-          <span class="regret-tier-label">🟢 Nice to Have</span>
-          <span class="regret-names">${niceToHave.slice(0, 2).join(', ')}${niceToHave.length > 2 ? '...' : ''}</span>
+        ${niceToHave.length ? `<div class="highlight-tier-row">
+          <span class="highlight-tier-label">🟢 Nice to Have</span>
+          <span class="highlight-names">${niceToHave.slice(0, 2).join(', ')}${niceToHave.length > 2 ? '...' : ''}</span>
         </div>` : ''}
       </div>
     `;
@@ -1476,7 +1476,7 @@ function renderItinerary(itinerary) {
     }).join('');
 
     critiqueHtml = `
-      <div class="regret-summary" style="margin:0 16px 16px;">
+      <div class="highlight-summary" style="margin:0 16px 16px;">
         <h4>Critic Panel</h4>
         ${rows}
       </div>
@@ -1491,7 +1491,7 @@ function renderItinerary(itinerary) {
 
   container.innerHTML = `
     <div class="itinerary-content">
-      ${regretHtml}
+      ${highlightHtml}
       ${daysHtml}
       ${critiqueHtml}
     </div>
@@ -1522,7 +1522,7 @@ function buildDaySection(day, dayIdx, color) {
 
   const expsHtml = (day.experiences || []).map((sched, idx, arr) => {
     const exp = sched.experience;
-    const rankings = state.itinerary?.regret_rankings || [];
+    const rankings = state.itinerary?.highlight_rankings || [];
     const rank = rankings.find(r => r.experience_id === exp.id);
     return buildExpCard(sched, exp, rank, idx < arr.length - 1 ? arr[idx + 1] : null);
   }).join('');
@@ -1555,12 +1555,12 @@ function buildExpCard(sched, exp, rank, nextSched) {
   const costStr = exp.cost_euros > 0 ? `€${exp.cost_euros}` : 'Free';
   const durStr = `${exp.duration_minutes}min`;
 
-  let regretBadge = '';
+  let highlightBadge = '';
   if (rank) {
-    const badgeClass = rank.tier === 'must_do' ? 'regret-must' :
-                       rank.tier === 'should_do' ? 'regret-should' : 'regret-nice';
+    const badgeClass = rank.tier === 'must_do' ? 'highlight-must' :
+                       rank.tier === 'should_do' ? 'highlight-should' : 'highlight-nice';
     const emoji = rank.tier === 'must_do' ? '🔴' : rank.tier === 'should_do' ? '🟡' : '🟢';
-    regretBadge = `<span class="regret-badge ${badgeClass}">${emoji} ${rank.tier.replace('_', ' ')}</span>`;
+    highlightBadge = `<span class="highlight-badge ${badgeClass}">${emoji} ${rank.tier.replace('_', ' ')}</span>`;
   }
 
   const travelConnector = nextSched && nextSched.travel_time_from_prev > 0 ? `
@@ -1580,7 +1580,7 @@ function buildExpCard(sched, exp, rank, nextSched) {
             <span class="exp-type-badge ${typeClass}">${exp.experience_type}</span>
             <span class="exp-cost">${costStr}</span>
             <span class="exp-duration">⏱ ${durStr}</span>
-            ${regretBadge}
+            ${highlightBadge}
           </div>
         </div>
       </div>

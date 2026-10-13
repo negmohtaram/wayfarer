@@ -16,7 +16,6 @@ import asyncio
 import json
 from pathlib import Path
 
-from src.evaluation.models import EvaluationScenario
 from src.evaluation.runner import EVAL_DIR, run_scenario, save_result
 from src.evaluation.scenarios.baseline_scenarios import SCENARIO_BY_ID
 from src.models.persona import TravelerPersona
@@ -90,7 +89,7 @@ async def replay_scenario(scenario_id: str, from_file: str | None = None) -> Non
 
     if result.soft_metrics:
         m = result.soft_metrics
-        print(f"\nSoft metrics:")
+        print("\nSoft metrics:")
         print(f"  avg_persona_score:      {m.avg_persona_score}")
         print(f"  total_travel_time_min:  {m.total_travel_time_minutes}")
         print(f"  experience_diversity:   {m.experience_type_diversity}/6")

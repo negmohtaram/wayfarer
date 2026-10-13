@@ -3,7 +3,6 @@ import asyncio
 import random
 import socket
 
-import pytest
 
 import src.agents.llm as llm_module
 import src.agents.nodes.assembler as assembler

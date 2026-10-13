@@ -13,7 +13,6 @@ does not expose a counter. This is a known gap; see docs/evaluation.md.
 
 import contextlib
 import time
-from typing import AsyncGenerator
 
 import src.agents.nodes.assembler as _assembler_module
 from src.agents.graph import planning_graph
@@ -99,7 +98,6 @@ async def run_replanning(
     Run the replanning graph and return the updated itinerary + operational metrics.
     Never raises.
     """
-    from src.models.persona import TravelerPersona
 
     node_runtimes: dict[str, float] = {}
     errors: list[str] = []

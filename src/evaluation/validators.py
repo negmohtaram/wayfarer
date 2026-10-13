@@ -15,7 +15,7 @@ Severity:
 from src.evaluation.models import EvaluationScenario, ValidationResult
 from src.models.itinerary import Itinerary
 from src.optimization.energy import time_to_minutes
-from src.optimization.route import haversine, travel_time_minutes
+from src.optimization.route import travel_time_minutes
 
 
 def _ok(code: str, message: str, severity: str = "error") -> ValidationResult:

@@ -22,8 +22,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest>=8"]
+dev = ["ruff==0.15.20", "mypy", "pytest>=8"]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.ruff.lint]
+# Pinned with the ruff version so a new release cannot change what counts as clean.
+select = ["E4", "E7", "E9", "F"]

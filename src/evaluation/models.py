@@ -60,6 +60,7 @@ class OperationalMetrics(BaseModel):
 class EvaluationResult(BaseModel):
     scenario_id: str
     planner_version: str
+    run: int = 0                               # repeat index when a scenario runs several times
     run_at: str                                # ISO timestamp
     scenario: EvaluationScenario
     output_itinerary: Optional[dict] = None    # full itinerary dict; None if planning failed
@@ -70,3 +71,5 @@ class EvaluationResult(BaseModel):
     operational_metrics: OperationalMetrics
     passed_all_hard_validators: bool
     planning_error: Optional[str] = None
+    recorded_calls: Optional[int] = None       # model + weather calls recorded or replayed
+    eval_error: Optional[str] = None           # set when a call failed or had no recording; run is invalid

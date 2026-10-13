@@ -10,6 +10,10 @@ Each call is stored under a key made from what determines the answer (call site,
 temperature, output schema, messages) plus an occurrence counter, so the same request made
 twice in one run (e.g. the critic seeing the same itinerary again) keeps both answers.
 In replay mode a missing recording raises ReplayMiss; nothing falls back to the network.
+
+The planner catches model and weather errors and falls back to rules, which is right in
+production but would hide a failed call from an evaluation. So the recorder also keeps a
+list of every call that failed or had no recording; the runner marks such a run invalid.
 """
 from __future__ import annotations
 
@@ -73,6 +77,7 @@ class Recorder:
         self.seen: dict[str, int] = {}
         self.calls = 0                         # real calls made (record mode)
         self.replayed = 0
+        self.failures: list[str] = []          # calls that failed or had no recording
 
     def key(self, meta: dict, messages: Any) -> str:
         blob = json.dumps({"meta": meta, "messages": _messages_to_json(messages)},
@@ -87,10 +92,15 @@ class Recorder:
         path = self.folder / f"{key}.json"
         if self.mode == "replay":
             if not path.exists():
+                self.failures.append(f"{meta.get('site', 'call')}: no recording")
                 raise ReplayMiss(f"no recording {path.name} for {meta}")
             self.replayed += 1
             return _decode(json.loads(path.read_text())["result"])
-        result = await live()
+        try:
+            result = await live()
+        except Exception as exc:
+            self.failures.append(f"{meta.get('site', 'call')}: {type(exc).__name__}")
+            raise
         self.calls += 1
         self.folder.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"meta": meta, "messages": _messages_to_json(messages),

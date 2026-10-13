@@ -10,10 +10,18 @@ Usage:
 
     # Run all and write baseline_v1 report
     python -m src.evaluation.runner --report
+
+    # Record 3 live runs of every scenario, then replay them with no network
+    python -m src.evaluation.runner --mode record --repeats 3 --report
+    python -m src.evaluation.runner --mode replay --repeats 3 --report
+
+Recordings go to eval_results/recordings/<version>/run_<k>/<scenario_id>/, one folder per
+scenario and run, so any single run of any scenario can be replayed on its own.
 """
 
 import argparse
 import asyncio
+import contextlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +29,7 @@ from pathlib import Path
 from src.evaluation.instrumentation import run_planning, run_replanning
 from src.evaluation.metrics import compute_soft_metrics
 from src.evaluation.models import EvaluationResult, OperationalMetrics
+from src.evaluation.recording import recording
 from src.evaluation.scenarios.baseline_scenarios import ALL_SCENARIOS, SCENARIO_BY_ID
 from src.evaluation.validators import passed_all_hard, run_all_validators
 from src.agents.state import PlanningState
@@ -161,7 +170,7 @@ def save_result(result: EvaluationResult) -> Path:
     runs_dir.mkdir(exist_ok=True)
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = runs_dir / f"{result.scenario_id}_{ts}.json"
+    out_path = runs_dir / f"{result.scenario_id}_run{result.run}_{ts}.json"
     out_path.write_text(result.model_dump_json(indent=2))
 
     # Update index
@@ -173,37 +182,71 @@ def save_result(result: EvaluationResult) -> Path:
     return out_path
 
 
-async def run_all(version: str = PLANNER_VERSION, save: bool = True) -> list[EvaluationResult]:
+def recording_folder(root: Path, run: int, scenario_id: str) -> Path:
+    return Path(root) / f"run_{run}" / scenario_id
+
+
+async def run_all(
+    version: str = PLANNER_VERSION,
+    save: bool = True,
+    mode: str = "live",
+    repeats: int = 1,
+    scenarios=None,
+    recordings_root: Path | None = None,
+) -> list[EvaluationResult]:
+    """Run every scenario `repeats` times. mode is live, record or replay."""
+    if mode not in ("live", "record", "replay"):
+        raise ValueError(mode)
+    scenarios = ALL_SCENARIOS if scenarios is None else scenarios
+    root = recordings_root or EVAL_DIR / "recordings" / version
     results = []
-    total = len(ALL_SCENARIOS)
-    for i, scenario in enumerate(ALL_SCENARIOS, 1):
-        print(f"[{i}/{total}] Running: {scenario.id}")
-        try:
-            result = await run_scenario(scenario, version)
-            status = "✓" if result.passed_all_hard_validators else "✗"
+    total = len(scenarios)
+    for run in range(repeats):
+        for i, scenario in enumerate(scenarios, 1):
+            print(f"[run {run}] [{i}/{total}] Running: {scenario.id}")
+            if mode == "live":
+                ctx = contextlib.nullcontext(None)
+            else:
+                ctx = recording(mode, recording_folder(root, run, scenario.id))
+            with ctx as rec:
+                try:
+                    result = await run_scenario(scenario, version)
+                except Exception as exc:
+                    print(f"  ✗ {scenario.id} — RUNNER EXCEPTION: {exc}")
+                    result = EvaluationResult(
+                        scenario_id=scenario.id,
+                        planner_version=version,
+                        run_at=datetime.now(timezone.utc).isoformat(),
+                        scenario=scenario,
+                        input_snapshot={},
+                        operational_metrics=OperationalMetrics(
+                            total_runtime_seconds=0,
+                            llm_call_count=0,
+                            revision_count=0,
+                            errors=[str(exc)],
+                        ),
+                        passed_all_hard_validators=False,
+                        planning_error=str(exc),
+                    )
+            result.run = run
+            if rec is not None:
+                result.recorded_calls = rec.calls if mode == "record" else rec.replayed
+                if rec.failures:
+                    result.eval_error = (
+                        f"{len(rec.failures)} call(s) failed, fallback used: "
+                        + "; ".join(rec.failures)
+                    )
+            if result.eval_error:
+                status = "INVALID"
+            else:
+                status = "✓" if result.passed_all_hard_validators else "✗"
             error = f" — ERROR: {result.planning_error}" if result.planning_error else ""
-            print(f"  {status} {scenario.id} ({result.operational_metrics.total_runtime_seconds:.1f}s){error}")
+            invalid = f" — {result.eval_error}" if result.eval_error else ""
+            print(f"  {status} {scenario.id} ({result.operational_metrics.total_runtime_seconds:.1f}s){error}{invalid}")
             if save:
                 path = save_result(result)
                 print(f"  → {path}")
-        except Exception as exc:
-            print(f"  ✗ {scenario.id} — RUNNER EXCEPTION: {exc}")
-            result = EvaluationResult(
-                scenario_id=scenario.id,
-                planner_version=version,
-                run_at=datetime.now(timezone.utc).isoformat(),
-                scenario=scenario,
-                input_snapshot={},
-                operational_metrics=OperationalMetrics(
-                    total_runtime_seconds=0,
-                    llm_call_count=0,
-                    revision_count=0,
-                    errors=[str(exc)],
-                ),
-                passed_all_hard_validators=False,
-                planning_error=str(exc),
-            )
-        results.append(result)
+            results.append(result)
     return results
 
 
@@ -211,31 +254,39 @@ def main():
     parser = argparse.ArgumentParser(description="Wayfarer evaluation runner")
     parser.add_argument("--scenario", help="Run a single scenario by ID")
     parser.add_argument("--version", default=PLANNER_VERSION, help="Planner version label")
+    parser.add_argument("--mode", choices=["live", "record", "replay"], default="live",
+                        help="live: call the model; record: call it and save every answer; "
+                             "replay: reuse saved answers, no network")
+    parser.add_argument("--repeats", type=int, default=1, help="Runs per scenario")
+    parser.add_argument("--recordings", type=Path, default=None,
+                        help="Recordings folder (default eval_results/recordings/<version>)")
     parser.add_argument("--report", action="store_true", help="Generate baseline report after run")
     parser.add_argument("--no-save", action="store_true", help="Don't save results to disk")
     args = parser.parse_args()
 
+    scenarios = None
     if args.scenario:
         scenario = SCENARIO_BY_ID.get(args.scenario)
         if not scenario:
             print(f"Unknown scenario: {args.scenario}")
             print(f"Available: {', '.join(SCENARIO_BY_ID)}")
             return
-        result = asyncio.run(run_scenario(scenario, args.version))
+        scenarios = [scenario]
+
+    results = asyncio.run(run_all(
+        args.version, save=not args.no_save, mode=args.mode, repeats=args.repeats,
+        scenarios=scenarios, recordings_root=args.recordings,
+    ))
+    if args.scenario and args.repeats == 1:
+        print(results[0].model_dump_json(indent=2))
+    if args.report:
+        from src.evaluation.report import generate_report, print_report
+        report = generate_report(results, args.version)
+        print_report(report)
         if not args.no_save:
-            path = save_result(result)
-            print(f"Saved: {path}")
-        print(result.model_dump_json(indent=2))
-    else:
-        results = asyncio.run(run_all(args.version, save=not args.no_save))
-        if args.report:
-            from src.evaluation.report import generate_report, print_report
-            report = generate_report(results, args.version)
-            print_report(report)
-            if not args.no_save:
-                report_path = EVAL_DIR / f"{args.version}_report.json"
-                report_path.write_text(json.dumps(report, indent=2))
-                print(f"\nReport saved: {report_path}")
+            report_path = EVAL_DIR / f"{args.version}_report.json"
+            report_path.write_text(json.dumps(report, indent=2))
+            print(f"\nReport saved: {report_path}")
 
 
 if __name__ == "__main__":

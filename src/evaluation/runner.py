@@ -17,12 +17,17 @@ Usage:
 
 Recordings go to eval_results/recordings/<version>/run_<k>/<scenario_id>/, one folder per
 scenario and run, so any single run of any scenario can be replayed on its own.
+
+    # After a rate limit: record again, replaying every scenario run that already recorded
+    # cleanly and calling the model only for the missing or invalid ones
+    python -m src.evaluation.runner --mode record --repeats 3 --resume --report
 """
 
 import argparse
 import asyncio
 import contextlib
 import json
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -182,6 +187,9 @@ def save_result(result: EvaluationResult) -> Path:
     return out_path
 
 
+COMPLETE_MARK = "_complete"   # written when a scenario run recorded with no failed call
+
+
 def recording_folder(root: Path, run: int, scenario_id: str) -> Path:
     return Path(root) / f"run_{run}" / scenario_id
 
@@ -193,8 +201,13 @@ async def run_all(
     repeats: int = 1,
     scenarios=None,
     recordings_root: Path | None = None,
+    resume: bool = False,
 ) -> list[EvaluationResult]:
-    """Run every scenario `repeats` times. mode is live, record or replay."""
+    """Run every scenario `repeats` times. mode is live, record or replay.
+
+    With resume (record mode only), a scenario run whose recording is complete is replayed
+    instead of recorded again; the rest are recorded from scratch.
+    """
     if mode not in ("live", "record", "replay"):
         raise ValueError(mode)
     scenarios = ALL_SCENARIOS if scenarios is None else scenarios
@@ -204,10 +217,17 @@ async def run_all(
     for run in range(repeats):
         for i, scenario in enumerate(scenarios, 1):
             print(f"[run {run}] [{i}/{total}] Running: {scenario.id}")
-            if mode == "live":
+            folder = recording_folder(root, run, scenario.id)
+            run_mode = mode
+            if mode == "record":
+                if resume and (folder / COMPLETE_MARK).exists():
+                    run_mode = "replay"
+                else:
+                    shutil.rmtree(folder, ignore_errors=True)   # no stale answers from an older recording
+            if run_mode == "live":
                 ctx = contextlib.nullcontext(None)
             else:
-                ctx = recording(mode, recording_folder(root, run, scenario.id))
+                ctx = recording(run_mode, folder)
             with ctx as rec:
                 try:
                     result = await run_scenario(scenario, version)
@@ -230,12 +250,15 @@ async def run_all(
                     )
             result.run = run
             if rec is not None:
-                result.recorded_calls = rec.calls if mode == "record" else rec.replayed
+                result.recorded_calls = rec.calls if run_mode == "record" else rec.replayed
                 if rec.failures:
                     result.eval_error = (
                         f"{len(rec.failures)} call(s) failed, fallback used: "
                         + "; ".join(rec.failures)
                     )
+                elif run_mode == "record":
+                    folder.mkdir(parents=True, exist_ok=True)
+                    (folder / COMPLETE_MARK).touch()
             if result.eval_error:
                 status = "INVALID"
             else:
@@ -260,6 +283,8 @@ def main():
     parser.add_argument("--repeats", type=int, default=1, help="Runs per scenario")
     parser.add_argument("--recordings", type=Path, default=None,
                         help="Recordings folder (default eval_results/recordings/<version>)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Record mode: replay scenario runs already recorded cleanly, record the rest")
     parser.add_argument("--report", action="store_true", help="Generate baseline report after run")
     parser.add_argument("--no-save", action="store_true", help="Don't save results to disk")
     args = parser.parse_args()
@@ -275,7 +300,7 @@ def main():
 
     results = asyncio.run(run_all(
         args.version, save=not args.no_save, mode=args.mode, repeats=args.repeats,
-        scenarios=scenarios, recordings_root=args.recordings,
+        scenarios=scenarios, recordings_root=args.recordings, resume=args.resume,
     ))
     if args.scenario and args.repeats == 1:
         print(results[0].model_dump_json(indent=2))

@@ -84,3 +84,29 @@ def test_failed_live_call_marks_the_run_invalid_even_if_the_fallback_plans(tmp_p
     [result] = _run("record", tmp_path)
     assert result.eval_error is not None
     assert "experience_critic: RuntimeError" in result.eval_error
+
+
+def test_resume_records_only_what_is_missing_and_replays_the_rest(tmp_path, monkeypatch):
+    monkeypatch.setattr(llm_module.asyncio, "sleep", _no_wait)
+    rng = random.Random()
+    monkeypatch.setattr(assembler, "_fetch_weather_live", _random_weather(rng))
+
+    _use_model(monkeypatch, FailingModel)                  # the provider is down
+    [first] = _run("record", tmp_path)
+    assert first.eval_error is not None
+    assert not (recording_folder(tmp_path, 0, SCENARIO) / "_complete").exists()
+
+    model = RandomModel(rng)                               # the provider is back
+    _use_model(monkeypatch, lambda: model)
+    second = asyncio.run(run_all(save=False, mode="record", scenarios=[SCENARIO_BY_ID[SCENARIO]],
+                                 recordings_root=tmp_path, resume=True))[0]
+    assert second.eval_error is None
+    files = list(recording_folder(tmp_path, 0, SCENARIO).glob("*.json"))
+    assert len(files) == second.recorded_calls             # nothing left over from the failed run
+    assert (recording_folder(tmp_path, 0, SCENARIO) / "_complete").exists()
+
+    _block_live_calls(monkeypatch)                         # resuming again calls nothing live
+    third = asyncio.run(run_all(save=False, mode="record", scenarios=[SCENARIO_BY_ID[SCENARIO]],
+                                recordings_root=tmp_path, resume=True))[0]
+    assert third.eval_error is None
+    assert _comparable(third) == _comparable(second)

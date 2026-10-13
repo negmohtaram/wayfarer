@@ -1,5 +1,7 @@
 # WAYFARER
 
+[![CI](https://github.com/negmohtaram/wayfarer/actions/workflows/ci.yml/badge.svg)](https://github.com/negmohtaram/wayfarer/actions/workflows/ci.yml)
+
 A multi-agent travel planner that cares about *who's traveling*, not just where.
 
 Most travel planners optimize for logistics. WAYFARER builds itineraries around the traveler's personality, energy, and what they'd regret missing. Every plan then goes through a panel of critic agents before the traveler sees it.

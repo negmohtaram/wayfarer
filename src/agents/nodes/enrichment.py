@@ -3,6 +3,7 @@ import logging
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 
 from src.agents.llm import call_with_retry, get_llm
+from src.config import GROQ_MODEL
 from src.agents.state import PlanningState
 from src.agents.tools.search import web_search
 
@@ -49,7 +50,10 @@ async def enrichment_node(state: PlanningState) -> PlanningState:
                 ),
             ]
 
-            response = await call_with_retry(llm_with_tools.ainvoke, messages)
+            response = await call_with_retry(
+                llm_with_tools.ainvoke, messages,
+                meta={"site": "enrichment_search", "model": GROQ_MODEL, "temperature": 0, "schema": "tools:web_search"},
+            )
 
             if not response.tool_calls:
                 continue
@@ -62,7 +66,10 @@ async def enrichment_node(state: PlanningState) -> PlanningState:
                 content=str(search_result),
                 tool_call_id=tool_call["id"],
             ))
-            final = await call_with_retry(summarizer.ainvoke, messages)
+            final = await call_with_retry(
+                summarizer.ainvoke, messages,
+                meta={"site": "enrichment_summary", "model": GROQ_MODEL, "temperature": 0, "schema": None},
+            )
 
             update = final.content.strip()
             if update and len(update) > 20:

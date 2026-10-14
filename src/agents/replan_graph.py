@@ -25,6 +25,7 @@ async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
     Falls back to an empty analysis dict on failure.
     """
     from src.agents.llm import call_with_retry, get_llm
+    from src.config import GROQ_MODEL
 
     state.setdefault("log", [])
     disruption = state.get("disruption", "")
@@ -61,7 +62,11 @@ async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
 
     try:
         llm = get_llm(temperature=0.3).with_structured_output(DisruptionAnalysis)
-        result: DisruptionAnalysis = await call_with_retry(llm.ainvoke, messages)
+        result: DisruptionAnalysis = await call_with_retry(
+            llm.ainvoke, messages,
+            meta={"site": "disruption_analyzer", "model": GROQ_MODEL, "temperature": 0.3,
+                  "schema": "DisruptionAnalysis"},
+        )
         state["disruption_analysis"] = result.model_dump()
         state["log"].append(f"🔄 Disruption classified as: {result.disruption_type}")
     except Exception as e:

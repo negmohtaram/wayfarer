@@ -1,0 +1,367 @@
+{
+  "version": "baseline_v1",
+  "total_scenarios": 56,
+  "planning_failures": 1,
+  "planning_failure_rate_pct": 1.8,
+  "valid_itinerary_rate_pct": 92.9,
+  "unexpected_violation_counts": {
+    "DAILY_BUDGET_RESPECTED": 3,
+    "TRIP_BUDGET_RESPECTED": 1
+  },
+  "known_unsupported_features": {
+    "MUST_AVOID_RESPECTED": 1
+  },
+  "top_unexpected_failures": [
+    {
+      "code": "DAILY_BUDGET_RESPECTED",
+      "count": 3,
+      "rate_pct": 5.4
+    },
+    {
+      "code": "TRIP_BUDGET_RESPECTED",
+      "count": 1,
+      "rate_pct": 1.8
+    }
+  ],
+  "soft_metrics": {
+    "avg_persona_score": {
+      "count": 55,
+      "mean": 0.82,
+      "median": 0.81,
+      "p95": 0.91,
+      "min": 0.72,
+      "max": 0.93
+    },
+    "total_travel_time_minutes": {
+      "count": 55,
+      "mean": 96.45,
+      "median": 90,
+      "p95": 208,
+      "min": 10,
+      "max": 208
+    },
+    "budget_utilization_pct": {
+      "count": 55,
+      "mean": 41.38,
+      "median": 37.2,
+      "p95": 90.4,
+      "min": 9.5,
+      "max": 167.1
+    },
+    "energy_mismatch_count": {
+      "count": 55,
+      "mean": 0,
+      "median": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    }
+  },
+  "operational": {
+    "runtime_seconds": {
+      "count": 55,
+      "mean": 7.45,
+      "median": 0.1,
+      "p95": 35.36,
+      "min": 0.03,
+      "max": 39.18
+    },
+    "llm_calls": {
+      "count": 55,
+      "mean": 2.33,
+      "median": 3.0,
+      "p95": 3.0,
+      "min": 1.0,
+      "max": 4.0
+    },
+    "revision_count_distribution": {
+      "0": 16,
+      "1": 10,
+      "2": 29
+    }
+  },
+  "planning_errors": [
+    {
+      "scenario_id": "stress_ultra_low_budget",
+      "error": "'Experience' object has no attribute 'experience'"
+    }
+  ],
+  "repeats": {
+    "total_runs": 56,
+    "valid_runs": 56,
+    "invalid_runs": 0,
+    "invalid_share_pct": 0.0,
+    "publishable": true,
+    "valid_itinerary_rate": {
+      "estimate": 92.86,
+      "ci_low": 85.71,
+      "ci_high": 98.21,
+      "half_width": 6.25,
+      "scenarios": 56,
+      "too_wide": true
+    },
+    "soft_metric_intervals": {
+      "avg_persona_score": {
+        "estimate": 0.82,
+        "ci_low": 0.8,
+        "ci_high": 0.83,
+        "half_width": 0.01,
+        "scenarios": 55,
+        "too_wide": false
+      },
+      "total_travel_time_minutes": {
+        "estimate": 96.45,
+        "ci_low": 83.73,
+        "ci_high": 109.8,
+        "half_width": 13.04,
+        "scenarios": 55,
+        "too_wide": true
+      },
+      "budget_utilization_pct": {
+        "estimate": 41.38,
+        "ci_low": 35.4,
+        "ci_high": 48.52,
+        "half_width": 6.56,
+        "scenarios": 55,
+        "too_wide": true
+      },
+      "energy_mismatch_count": {
+        "estimate": 0.0,
+        "ci_low": 0.0,
+        "ci_high": 0.0,
+        "half_width": 0.0,
+        "scenarios": 55,
+        "too_wide": false
+      }
+    },
+    "per_scenario": {
+      "pace_slow_solo_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pace_fast_solo_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pace_slow_couple_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pace_fast_couple_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pace_slow_family_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pace_fast_friends_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "budget_low_solo_amsterdam": {
+        "passed": 0,
+        "valid_runs": 1
+      },
+      "budget_high_couple_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "budget_low_solo_paris": {
+        "passed": 0,
+        "valid_runs": 1
+      },
+      "budget_high_couple_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "budget_low_solo_tokyo": {
+        "passed": 0,
+        "valid_runs": 1
+      },
+      "budget_high_couple_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "social_solo_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "social_couple_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "social_family_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "social_friends_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "local_hyper_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "tourist_hyper_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "local_leaning_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "tourist_leaning_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pref_food_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pref_culture_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pref_nature_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pref_nightlife_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "pref_photography_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "constraint_wheelchair_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "constraint_bad_knee_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "constraint_elderly_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "constraint_multi_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "energy_morning_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "energy_evening_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "energy_consistent_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "length_oneday_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "length_twoday_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "length_fiveday_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "length_sevenday_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "stress_ultra_low_budget": {
+        "passed": 0,
+        "valid_runs": 1
+      },
+      "stress_high_budget_slow": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "stress_typical_balanced": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "weather_rainy_all_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "weather_mixed_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "weather_unavailable_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "weather_sunny_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "disruption_weather_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "disruption_closed_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "disruption_tired_tokyo": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "disruption_love_neighborhood_london": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "disruption_delayed_start_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "must_do_amsterdam": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "must_avoid_paris": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "edge_all_constraints": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "edge_max_pace_max_budget": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "edge_zero_crowd_tolerance": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "balanced_paris_reference": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "balanced_tokyo_reference": {
+        "passed": 1,
+        "valid_runs": 1
+      },
+      "balanced_london_reference": {
+        "passed": 1,
+        "valid_runs": 1
+      }
+    },
+    "flipped_scenarios": [],
+    "flip_rate_pct": null,
+    "invalid": []
+  }
+}

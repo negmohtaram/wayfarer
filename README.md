@@ -1,5 +1,7 @@
 # WAYFARER
 
+[![CI](https://github.com/negmohtaram/wayfarer/actions/workflows/ci.yml/badge.svg)](https://github.com/negmohtaram/wayfarer/actions/workflows/ci.yml)
+
 A multi-agent travel planner that cares about *who's traveling*, not just where.
 
 Most travel planners optimize for logistics. WAYFARER builds itineraries around the traveler's personality, energy, and what they'd regret missing. Every plan then goes through a panel of critic agents before the traveler sees it.
@@ -19,6 +21,20 @@ The system is a LangGraph pipeline with the following stages:
 A separate **Replan Graph** handles mid-trip disruptions (weather, closures, "I'm exhausted") by re-analyzing remaining days without touching completed ones.
 
 All intermediate outputs stream to the frontend via SSE.
+
+## Evaluation (baseline_v1)
+
+The planner is measured on 56 fixed scenarios (personas, budgets, accessibility needs, weather, disruptions) with hard checks such as schedule overlaps and budgets, plus soft metrics. Every model and weather call is recorded, so any run can be replayed exactly with no network. A run where a model call failed and a fallback planned instead is marked invalid and left out of every number. The full report is in `docs/baseline_v1_report.json` and the method in `docs/evaluation.md`.
+
+| Metric | baseline_v1 (openai/gpt-oss-120b, 1 run per scenario) |
+|---|---|
+| Valid runs | 56 of 56 |
+| Valid itinerary rate | 92.9% (95% CI 85.7 to 98.2, bootstrap over scenarios) |
+| Failing scenarios | 3 low-budget trips end over budget, 1 ultra-low-budget trip crashes |
+| Revision loop at its cap | 29 of 55 plans |
+| Mean travel time per trip | 96 min (95% CI 84 to 110) |
+
+**Comparing versions.** With 56 scenarios and a pass rate near 93%, the interval is about plus or minus 7 points. Two separate pass rates therefore can't show a 5-point improvement. Changes are compared on the same scenarios instead. We count the scenarios a change fixes and the ones it breaks, and bootstrap the difference over scenarios. A new planner version makes new model calls, so it runs with repeats, which keeps model noise from looking like an improvement. Reaching plus or minus 5 points on a single rate would need roughly twice as many scenarios.
 
 ## Status
 

@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for London.\n\nTraveler: friends, pace 2.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Millennium Bridge walk at dawn, St Paul's to Tate, Tate Modern Turbine Hall and Level 10 viewing gallery, Borough Market on a weekday morning, Padella pasta on Borough High Street, pre-5pm, Leake Street Arches (the Banksy Tunnel) at dusk\n  Types: scenic, cultural, food, food, serendipity | Avg local score: 5.2 | Avg fit score: 0.72\nDay 2 (Peak Day): Shoreditch street art walk, Rivington Street to Brick Lane, Bermondsey Beer Mile on a Saturday, Greenwich Park Observatory at golden hour, Frank's Cafe rooftop, Peckham, summer evening, Dennis Severs' House candlelit evening, Spitalfields\n  Types: serendipity, food, scenic, nightlife, cultural | Avg local score: 6.9 | Avg fit score: 0.72\nDay 3 (The Farewell Day): Primrose Hill at sunrise for the London panorama, Portobello Road Market on a Saturday morning, Regent's Canal towpath from Little Venice to Broadway Market, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday, Hackney Wick canal walk and Crate Brewery\n  Types: scenic, serendipity, active, cultural, active | Avg local score: 6.1 | Avg fit score: 0.71\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.6,
+      "issues": [
+        "Pace mismatch: traveler prefers a very slow pace (2/10) but each day packs 5\u20118 activities, leaving little time to linger.",
+        "Day 2 is especially overloaded (8 stops) and mixes street\u2011art, food, nightlife, and cultural sites without adequate transition or rest, risking fatigue.",
+        "Day 1 lacks built\u2011in downtime between the Millennium Bridge walk, Tate visits, and market lunch; the schedule feels rushed for a slow\u2011moving group.",
+        "Ending on Day 3 (Hackney Wick canal walk & Crate Brewery) is pleasant but not a standout farewell; a more iconic or reflective finale would suit a friends\u2011group farewell.",
+        "Some activities (Tate Modern, British Museum) are high\u2011traffic tourist spots that dilute the moderate local preference (5/10)."
+      ],
+      "suggestions": [
+        "Trim each day to 3\u20114 core experiences, allowing 2\u20113\u202fhours per stop and buffer time for coffee breaks or spontaneous wandering.",
+        "Day 1: Keep the dawn Millennium Bridge walk, combine St\u202fPaul\u2019s and Tate Modern by walking the riverbank (single scenic block), then enjoy Borough Market and Padella at a relaxed pace. Drop the Level\u202f10 gallery or move it to Day 3.",
+        "Day 2: Choose a single neighbourhood focus (e.g., Shoreditch street\u2011art + Brick Lane food) and replace the Bermondsey Beer Mile and Greenwich Observatory with a leisurely lunch and sunset at Frank\u2019s Caf\u00e9. Keep Dennis Severs\u2019 House as the evening highlight; remove Spitalfields to reduce travel.",
+        "Day 3: Preserve the sunrise at Primrose Hill, then a relaxed Portobello Market stroll. Replace the long Regent\u2019s Canal towpath walk with a shorter Little Venice canal cruise, and end with a memorable dinner at a rooftop bar overlooking the city (e.g., Sky Garden) to give a strong farewell feeling.",
+        "Swap one of the high\u2011traffic museum visits for a smaller local cultural spot (e.g., Geffrye Museum or a community gallery) to better match the 5/10 local preference.",
+        "Insert explicit rest periods: coffee break at a riverside caf\u00e9 after the market, and a late\u2011afternoon pause in a park on Day 2."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 7-day itinerary for London.\n\nTraveler: solo, pace 6.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Tate Modern Turbine Hall and Level 10 viewing gallery, Leake Street Arches (the Banksy Tunnel) at dusk\n  Types: cultural, serendipity | Avg local score: 5.0 | Avg fit score: 0.80\nDay 2 (Deep Dive Day): Greenwich Park Observatory at golden hour, Frank's Cafe rooftop, Peckham, summer evening\n  Types: scenic, nightlife | Avg local score: 6.5 | Avg fit score: 0.80\nDay 3 (Discovery Day): Portobello Road Market on a Saturday morning, Regent's Canal towpath from Little Venice to Broadway Market\n  Types: serendipity, active | Avg local score: 6.8 | Avg fit score: 0.83\nDay 4 (Peak Day): Broadway Market Saturday and London Fields lido, Hackney Wick canal walk and Crate Brewery\n  Types: serendipity, active | Avg local score: 8.5 | Avg fit score: 0.81\nDay 5 (Reflection Day): Peckham Rye Park early morning and Rye Lane market, Bermondsey Beer Mile on a Saturday\n  Types: passive, food | Avg local score: 8.8 | Avg fit score: 0.75\nDay 6 (Reflection Day): Primrose Hill at sunrise for the London panorama, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday\n  Types: scenic, cultural | Avg local score: 4.5 | Avg fit score: 0.79\nDay 7 (The Farewell Day): Millennium Bridge walk at dawn, St Paul's to Tate, Columbia Road Flower Market at 8am Sunday, Maltby Street Market Saturday morning under the arches, Borough Market on a weekday morning, Shoreditch street art walk, Rivington Street to Brick Lane, Padella pasta on Borough High Street, pre-5pm, Traditional pub Sunday roast, a proper local, Dennis Severs' House candlelit evening, Spitalfields\n  Types: scenic, serendipity, food, food, serendipity, food, food, cultural | Avg local score: 6.8 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Day 4 and Day 5 are heavily weighted toward ultra\u2011local, serendipitous activities (local scores 8.5 and 8.8) which exceed the traveller's modest local preference (5/10) and may feel overwhelming for a solo traveller at a moderate pace.",
+        "Day 7 tries to cram 9 distinct stops into a single morning\u2011afternoon, making the schedule unrealistic and diluting the impact of the farewell experience.",
+        "The itinerary leans heavily on \"serendipity\" and \"active\" types (Days 3\u20114\u20117) while cultural and food experiences are under\u2011represented relative to the traveller's stated interests (culture 5/10, food 5/10).",
+        "Emotional arc peaks on Day 4 but then drops sharply on Day 5 (reflection) and Day 6 (low local score), creating a dip before the final day, which can feel anticlimactic.",
+        "Narrative coherence suffers because Days 3 and 4 share almost identical themes (serendipity\u202f+\u202factive) without a clear shift in focus."
+      ],
+      "suggestions": [
+        "Swap a few ultra\u2011local stops on Day 4 for a modest cultural venue (e.g., Geffrye Museum or a guided street\u2011art tour with historical context) to balance the local intensity.",
+        "On Day 5 replace part of the Bermondsey Beer Mile with a sit\u2011down food experience that aligns with the traveller's food rating (e.g., a well\u2011reviewed East\u202fEnd curry house) and limit the number of venues to keep the pace relaxed.",
+        "Trim Day 7 to 3\u20134 highlight experiences: keep the Millennium Bridge walk, Columbia Road Flower Market, a single market lunch (e.g., Borough Market), and a memorable dinner (Padella) followed by the candlelit Dennis Severs' House. Remove overlapping market visits and the extensive street\u2011art walk to preserve a memorable, unhurried farewell.",
+        "Introduce a dedicated cultural highlight on Day 6 (e.g., a short visit to the Victoria and Albert Museum or a West\u202fEnd theatre matinee) to raise the cultural quotient and smooth the emotional dip after the peak.",
+        "Re\u2011order the itinerary so the emotional arc builds to Day 4, then offers a gentle wind\u2011down on Days 5\u20116, and ends with a focused, high\u2011impact Day 7."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        4,
+        5,
+        7
+      ]
+    }
+  }
+}

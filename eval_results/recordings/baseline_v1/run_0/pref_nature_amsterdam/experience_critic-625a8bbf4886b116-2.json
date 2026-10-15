@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Canal cruise with local operator Wetlands Safari, Sunset canal bike ride, Westerkerk tower sunset\n  Types: cultural, scenic, active, scenic | Avg local score: 6.5 | Avg fit score: 0.87\nDay 2 (Peak Day): Dawn bike ride through Vondelpark, Keukenhof Gardens (seasonal, Apr-May only), Van Gogh Museum first entry, Stedelijk Museum contemporary art\n  Types: active, nature, cultural, cultural | Avg local score: 5.2 | Avg fit score: 0.85\nDay 3 (The Farewell Day): Rijksmuseum at opening hour, NEMO Science Museum rooftop terrace, Foam Photography Museum, Begijnhof hidden courtyard\n  Types: cultural, scenic, cultural, serendipity | Avg local score: 5.8 | Avg fit score: 0.82\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2 relies on Keukenhof Gardens, which are only open Apr\u2011May; if travel falls outside this window the activity fails.",
+        "Day 2\u2019s dawn bike ride plus back\u2011to\u2011back museum visits may exceed the traveler\u2019s moderate pace (5/10).",
+        "Day 3 is heavily cultural with little variety in sensory experience and no dedicated food or local\u2011flavor element, reducing ending impact.",
+        "Overall the emotional arc peaks on Day 2 but the farewell day does not deliver a distinct, memorable climax."
+      ],
+      "suggestions": [
+        "Replace Keukenhof with a local spring garden such as Amsterdamse Bos or a tulip field in nearby Lisse that\u2019s open year\u2011round, or shift the activity to a seasonal park walk.",
+        "Move the bike ride on Day 2 to mid\u2011morning and insert a relaxed brunch at a local caf\u00e9 (e.g., De Hallen) to lower intensity.",
+        "Add a food\u2011focused experience on Day 3 \u2013 e.g., a dinner at a traditional Dutch \u2018eetcaf\u00e9\u2019 in De Jordaan or a market tasting tour at Albert Cuypmarkt \u2013 to boost persona fit and ending memorability.",
+        "Conclude Day 3 with a sunset canal dinner cruise or a night\u2011time walk through the illuminated canals to give a stronger, memorable farewell moment.",
+        " sprinkle a short local\u2011neighbourhood walk (e.g., Nine Streets) into Day 1 or Day 3 to raise the local\u2011preference score toward the traveler\u2019s 5/10 target."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

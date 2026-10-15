@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 2.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Floating flower market on Singel canal, Foam Photography Museum, Begijnhof hidden courtyard, Indonesian rijsttafel dinner\n  Types: cultural, serendipity, cultural, serendipity, food | Avg local score: 6.2 | Avg fit score: 0.74\nDay 2 (Peak Day): Van Gogh Museum first entry, Rijksmuseum at opening hour, Albert Cuyp Market lunch, Vondelpark sunset picnic, Sunset canal bike ride\n  Types: cultural, cultural, food, passive, active | Avg local score: 6.2 | Avg fit score: 0.74\nDay 3 (The Farewell Day): Anne Frank House, NEMO Science Museum rooftop terrace, Canal cruise with local operator Wetlands Safari, Trpenmuseum (Tropics Museum), Westerkerk tower sunset\n  Types: cultural, scenic, scenic, cultural, scenic | Avg local score: 5.6 | Avg fit score: 0.75\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Overall pacing is too fast for a traveler who prefers a very slow (2/10) rhythm; each day crams 4\u20115 activities, leaving little time for rest or spontaneous exploration.",
+        "Day 2 packs two major museums, a market lunch, a park picnic, and a sunset bike ride, which exceeds the desired leisurely tempo.",
+        "Day 3 mixes heavy cultural sites (Anne Frank House) with a science museum, a cruise, and a tropical museum, creating a scattered narrative and limited downtime before the final sunset.",
+        "Variety is decent, but the balance leans heavily toward cultural/active experiences, under\u2011representing low\u2011key local immersion or relaxation that a solo traveler might appreciate."
+      ],
+      "suggestions": [
+        "Trim each day to 2\u20113 core activities, allowing 2\u20113 hour blocks per site and ample buffer time.",
+        "Replace the sunset bike ride on Day 2 with a relaxed evening canal walk or a seated coffee at a historic caf\u00e9 to maintain the scenic element without exertion.",
+        "On Day 3, consider swapping the NEMO rooftop terrace visit for a leisurely brunch in the Jordaan district, then keep the Anne Frank House and end with the Westerkerk sunset for a stronger narrative closure.",
+        "Introduce a dedicated \u2018slow\u2011morning\u2019 slot (e.g., a caf\u00e9 breakfast or a park bench pause) on each day to honor the traveler\u2019s slow pace preference.",
+        "Add a single, authentic local experience (e.g., a neighborhood market stroll without a meal) to boost the local score without adding time pressure."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

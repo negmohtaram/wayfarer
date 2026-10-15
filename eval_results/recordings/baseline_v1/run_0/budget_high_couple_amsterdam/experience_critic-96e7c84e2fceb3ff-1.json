@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: couple, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Floating flower market on Singel canal, Canal cruise with local operator Wetlands Safari, Begijnhof hidden courtyard, Indonesian rijsttafel dinner\n  Types: serendipity, scenic, serendipity, food | Avg local score: 6.5 | Avg fit score: 0.90\nDay 2 (Peak Day): Dawn bike ride through Vondelpark, Keukenhof Gardens (seasonal, Apr-May only), Sunset canal bike ride, Evening drinks in Leidseplein\n  Types: active, nature, active, food | Avg local score: 6.0 | Avg fit score: 0.91\nDay 3 (The Farewell Day): NEMO Science Museum rooftop terrace, EYE Filmmuseum and IJ riverbank, Westerkerk tower sunset, De Pijp golden hour wander zone\n  Types: scenic, cultural, scenic, serendipity | Avg local score: 6.9 | Avg fit score: 0.92\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2 packs two bike rides which may feel too vigorous for a traveler who prefers a moderate (5/10) pace.",
+        "Keukenhof Gardens is seasonal (Apr\u2011May) and highly touristic, which reduces the local authenticity score for a traveler with a modest local preference.",
+        "Food experiences are limited to one dinner and one drinks stop; the itinerary could better satisfy the traveler's food interest (5/10).",
+        "The farewell day lacks a strong, memorable closing moment; ending with museums and a wander may feel anticlimactic."
+      ],
+      "suggestions": [
+        "Swap the sunrise bike ride in Vondelpark for a relaxed early\u2011morning walk or a guided jog, keeping the park experience but lowering intensity.",
+        "Replace Keukenhof with Hortus Botanicus or the Amsterdamse Bos, offering garden scenery year\u2011round and a more local vibe.",
+        "Add a local dinner on Day 3, such as a canal\u2011side restaurant in De Pijp or a traditional Dutch tasting menu, to round out the food component and create a memorable farewell.",
+        "Consider a sunset dinner cruise or a private rooftop dinner on the final evening to give a stronger emotional climax.",
+        "Include a mid\u2011day coffee break at a historic caf\u00e9 (e.g., Caf\u00e9 de Jaren) on Day 1 to enrich the serendipity and local feel."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

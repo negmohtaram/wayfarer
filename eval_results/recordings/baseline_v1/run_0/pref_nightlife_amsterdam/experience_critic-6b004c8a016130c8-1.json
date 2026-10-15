@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 2-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Rijksmuseum at opening hour, Foam Photography Museum, Stedelijk Museum contemporary art\n  Types: cultural, cultural, cultural, cultural | Avg local score: 5.5 | Avg fit score: 0.82\nDay 2 (The Farewell Day): Anne Frank House, NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\n  Types: cultural, scenic, active, scenic | Avg local score: 5.8 | Avg fit score: 0.81\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Day 1 is a marathon of museums (5 cultural sites) with no change of pace, leading to repetition and potential fatigue.",
+        "Lacks active or scenic interludes that would match a moderate (5/10) pace preference.",
+        "No dedicated food or local\u2011culture stop (e.g., market, caf\u00e9, neighbourhood walk) despite the traveler's neutral local score.",
+        "Emotional arc peaks too early; the day ends without a memorable closing moment."
+      ],
+      "suggestions": [
+        "Swap one museum for a short, lively activity such as a stroll through the Jordaan neighbourhood or a visit to Albert Cuyp Market.",
+        "Insert a coffee/ lunch break at a local caf\u00e9 (e.g., Caf\u00e9 de Jaren) to add a food element and a breather.",
+        "Consider a brief park visit (Vondelpark or Amsterdamse Bos) for a scenic, low\u2011intensity pause.",
+        "If keeping all museums, group them geographically and schedule a 30\u2011minute canal walk between two sites to break up the indoor time."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1
+      ]
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "site": "weather",
+    "city": "amsterdam",
+    "start_date": "2026-09-10",
+    "days": 3
+  },
+  "messages": null,
+  "result": {
+    "kind": "json",
+    "data": [
+      {
+        "date": "2026-09-10",
+        "condition": "rainy",
+        "temp_high": 19.3,
+        "temp_low": 12.2,
+        "rain_probability": 14
+      },
+      {
+        "date": "2026-09-11",
+        "condition": "rainy",
+        "temp_high": 19.3,
+        "temp_low": 14.0,
+        "rain_probability": 96
+      },
+      {
+        "date": "2026-09-12",
+        "condition": "rainy",
+        "temp_high": 21.0,
+        "temp_low": 14.1,
+        "rain_probability": 100
+      }
+    ]
+  }
+}

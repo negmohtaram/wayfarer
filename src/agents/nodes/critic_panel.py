@@ -6,6 +6,7 @@ from src.agents.nodes.critics.experience import experience_critic
 from src.agents.nodes.critics.energy import energy_critic
 from src.agents.nodes.critics.budget import budget_critic
 from src.agents.nodes.critics.authenticity import authenticity_critic
+from src.evaluation.recording import note_fallback
 from src.models.itinerary import CritiqueResult
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ async def critic_panel_node(state: PlanningState) -> PlanningState:
             critiques.append(result)
         elif isinstance(result, Exception):
             logger.error("Critic '%s' failed: %s", critic_name, result, exc_info=result)
+            note_fallback(f"{critic_name}_critic", result)
             critiques.append(CritiqueResult(
                 critic_type=critic_name,
                 score=0.0,

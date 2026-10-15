@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Paris.\n\nTraveler: solo, pace 7.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Falafel in the Jewish Quarter (Le Marais), Centre Pompidou and Stravinsky Fountain, Luxembourg Gardens afternoon, \u00cele Saint-Louis evening walk and Berthillon ice cream\n  Types: food, cultural, passive, serendipity | Avg local score: 6.2 | Avg fit score: 0.80\nDay 2 (Peak Day): Eiffel Tower at dawn (before crowds), Mus\u00e9e d'Orsay impressionist galleries, Palais Royal gardens morning coffee, Saint-Germain literary cafe morning\n  Types: scenic, cultural, passive, food | Avg local score: 4.8 | Avg fit score: 0.77\nDay 3 (The Farewell Day): Montmartre pre-dawn walk to Sacr\u00e9-C\u0153ur, March\u00e9 d'Aligre morning market, Canal Saint-Martin morning walk, Natural wine bar evening in the 11th\n  Types: scenic, food, serendipity, food | Avg local score: 8.5 | Avg fit score: 0.78\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.2,
+      "issues": [
+        "Day 2 is densely packed (dawn Eiffel Tower, Mus\u00e9e d'Orsay, coffee, literary cafe) which may feel rushed for a traveler who prefers a slower pace (7/10). The average local score (4.8) is also below the traveler's preference.",
+        "Day 3 leans heavily on food experiences (market, wine bar) and repeats scenic walks, risking a sense of repetition and under\u2011representing cultural activities for a traveler with moderate culture interest (5/10)."
+      ],
+      "suggestions": [
+        "Day 2: Move the Mus\u00e9e d'Orsay visit to the afternoon and replace the morning literary cafe with a brief local bakery stop or a short walk in the nearby Saint-Germain gardens to create breathing room and raise the local immersion score.",
+        "Day 3: Swap the Canal Saint\u2011Martin walk for a short visit to the Mus\u00e9e de la Vie Romantique or the Atelier des Lumi\u00e8res to add a cultural touch, and consider a light brunch at a local boulangerie instead of the market for variety.",
+        "Overall: Keep the orientation day as is (strong variety), but ensure each day has at least one distinct activity type that isn\u2019t repeated from the previous day (e.g., add a performance, workshop, or guided tour)."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

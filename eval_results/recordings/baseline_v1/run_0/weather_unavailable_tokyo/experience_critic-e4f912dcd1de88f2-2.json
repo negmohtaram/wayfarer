@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Tokyo.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Meiji Shrine morning visit, Shimokitazawa vintage record and clothes shopping, Koenji shotengai and underground music, Shibuya Crossing at night\n  Types: cultural, serendipity, serendipity, scenic | Avg local score: 7.0 | Avg fit score: 0.77\nDay 2 (Peak Day): Mount Takao sunrise hike, Tsukiji outer market breakfast, Depachika (department store basement food hall), Izakaya evening in Yurakucho under the tracks\n  Types: active, food, food, food | Avg local score: 7.5 | Avg fit score: 0.80\nDay 3 (The Farewell Day): Senso-ji Temple at 6am, Nezu Shrine torii gates in morning mist, Hamarikyu Gardens tea ceremony, Sumida River evening boat\n  Types: cultural, scenic, cultural, scenic | Avg local score: 6.5 | Avg fit score: 0.78\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.8,
+      "issues": [
+        "Day\u202f1 packs four distinct stops (shrine, two neighborhoods, Shibuya) which may feel rushed for a traveler who prefers a moderate 5/10 pace.",
+        "Day\u202f2 is heavily food\u2011centric (three out of four slots) while the traveler\u2019s food interest is only average (5/10).",
+        "The overall local immersion score (\u22487) exceeds the traveler\u2019s local preference (5), risking a feeling of \u201ctoo local\u201d for a solo visitor seeking balance."
+      ],
+      "suggestions": [
+        "Day\u202f1: Combine Shimokitazawa and Koenji into a single \u201calternative\u2011culture\u201d block with a relaxed lunch break, or drop one to give more breathing room.",
+        "Day\u202f2: Swap one food activity (e.g., the depachika visit) for a light cultural stop such as the Edo\u2011Tokyo Museum or a short walk in Shinjuku Gyoen to diversify the day.",
+        "Throughout: Sprinkle a few low\u2011key experiences (e.g., a caf\u00e9 pause or a short park stroll) to lower the intensity and bring the local score closer to the traveler\u2019s 5\u2011point preference."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        1,
+        2
+      ]
+    }
+  }
+}

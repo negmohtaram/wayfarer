@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Floating flower market on Singel canal, Foam Photography Museum, Begijnhof hidden courtyard\n  Types: cultural, serendipity, cultural, serendipity | Avg local score: 6.0 | Avg fit score: 0.81\nDay 2 (Peak Day): Trpenmuseum (Tropics Museum), NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\n  Types: cultural, scenic, active, scenic | Avg local score: 6.2 | Avg fit score: 0.81\nDay 3 (The Farewell Day): Van Gogh Museum first entry, Rijksmuseum at opening hour, Canal cruise with local operator Wetlands Safari, Indonesian rijsttafel dinner\n  Types: cultural, cultural, scenic, food | Avg local score: 5.2 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Pacing is dense: four distinct stops each day may feel rushed for a traveler who prefers a moderate (5/10) pace.",
+        "Food experiences are limited to a single dinner on Day 3, which under\u2011serves the traveler's neutral food interest (5/10).",
+        "Cultural focus dominates Days 1 and 3, leaving little room for active or purely local immersion activities.",
+        "Day 3, intended as a farewell, mirrors Day 2\u2019s intensity rather than providing a softer, reflective close."
+      ],
+      "suggestions": [
+        "Trim each day to three main activities to respect the moderate pace\u2014e.g., drop the Foam Photography Museum on Day\u202f1.",
+        "Add a local food stop (e.g., lunch at a traditional brown\u2011caf\u00e9 or a street\u2011food market) on Days\u202f1 and\u202f2 to balance the food dimension.",
+        "Replace one cultural venue on Day\u202f3 with a guided walk through the Jordaan neighbourhood or a bike ride through Vondelpark for a more relaxed, local feel.",
+        "Shift the sunset canal bike ride from Day\u202f2 to early evening on Day\u202f3, allowing Day\u202f2 to end with a calmer activity (e.g., a coffee break at a canal\u2011side caf\u00e9).",
+        "Consider a short evening reflection activity\u2014such as a quiet drink at a historic pub\u2014after the rijsttafel to give the farewell a gentle, memorable wind\u2011down."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

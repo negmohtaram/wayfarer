@@ -93,19 +93,33 @@ class Recorder:
         if self.mode == "replay":
             if not path.exists():
                 self.failures.append(f"{meta.get('site', 'call')}: no recording")
-                raise ReplayMiss(f"no recording {path.name} for {meta}")
+                miss = ReplayMiss(f"no recording {path.name} for {meta}")
+                miss.counted_by_recorder = True
+                raise miss
             self.replayed += 1
             return _decode(json.loads(path.read_text())["result"])
         try:
             result = await live()
         except Exception as exc:
             self.failures.append(f"{meta.get('site', 'call')}: {type(exc).__name__}")
+            exc.counted_by_recorder = True
             raise
         self.calls += 1
         self.folder.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"meta": meta, "messages": _messages_to_json(messages),
                                     "result": _encode(result)}, indent=2, default=str))
         return result
+
+
+def note_fallback(site: str, exc: BaseException) -> None:
+    """Call wherever an error is swallowed and a fallback is used instead.
+
+    During an evaluation run this makes the run invalid, even when the error happened
+    outside a recorded call. Outside evaluation it does nothing.
+    """
+    recorder = active()
+    if recorder is not None and not getattr(exc, "counted_by_recorder", False):
+        recorder.failures.append(f"{site}: {type(exc).__name__}")
 
 
 @contextlib.contextmanager

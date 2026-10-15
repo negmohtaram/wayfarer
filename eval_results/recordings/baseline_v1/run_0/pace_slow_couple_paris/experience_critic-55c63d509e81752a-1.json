@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Paris.\n\nTraveler: couple, pace 9.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Falafel in the Jewish Quarter (Le Marais), Luxembourg Gardens afternoon, \u00cele Saint-Louis evening walk and Berthillon ice cream\n  Types: food, passive, serendipity | Avg local score: 6.7 | Avg fit score: 0.85\nDay 2 (Peak Day): Eiffel Tower at dawn (before crowds), Mus\u00e9e d'Orsay impressionist galleries, Saint-Germain literary cafe morning\n  Types: scenic, cultural, food | Avg local score: 3.7 | Avg fit score: 0.91\nDay 3 (The Farewell Day): Montmartre pre-dawn walk to Sacr\u00e9-C\u0153ur, Canal Saint-Martin morning walk, Natural wine bar evening in the 11th\n  Types: scenic, serendipity, food | Avg local score: 8.2 | Avg fit score: 0.87\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.5,
+      "issues": [
+        "Day\u202f2 packs three major activities (dawn Eiffel Tower, Mus\u00e9e d'Orsay, Saint\u2011Germain caf\u00e9) which conflicts with the couple\u2019s very slow pace (9/10).",
+        "The average local score for Day\u202f2 (3.7) is noticeably lower than the traveler\u2019s moderate local preference (5), making the day feel tourist\u2011heavy."
+      ],
+      "suggestions": [
+        "Swap the Mus\u00e9e d'Orsay for a smaller, more relaxed cultural spot (e.g., Mus\u00e9e de l'Orangerie or a quiet gallery in Saint\u2011Germain) to reduce walking time and crowd exposure.",
+        "Consider moving the Eiffel Tower visit to the evening for a sunset view, allowing a leisurely breakfast at the caf\u00e9 first and preserving the \u2018dawn\u2019 awe without an early\u2011morning rush.",
+        "Add a short, local\u2011flavor activity after the museum, such as a stroll through the nearby Rue de Seine art\u2011dealer streets, to raise the local score without adding intensity."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        2
+      ]
+    }
+  }
+}

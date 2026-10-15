@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "site": "weather",
+    "city": "paris",
+    "start_date": "2026-09-10",
+    "days": 2
+  },
+  "messages": null,
+  "result": {
+    "kind": "json",
+    "data": [
+      {
+        "date": "2026-09-10",
+        "condition": "partly_cloudy",
+        "temp_high": 21.4,
+        "temp_low": 11.4,
+        "rain_probability": 0
+      },
+      {
+        "date": "2026-09-11",
+        "condition": "rainy",
+        "temp_high": 25.5,
+        "temp_low": 14.9,
+        "rain_probability": 0
+      }
+    ]
+  }
+}

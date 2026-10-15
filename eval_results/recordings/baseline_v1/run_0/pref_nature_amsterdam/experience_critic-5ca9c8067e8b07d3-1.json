@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Canal cruise with local operator Wetlands Safari, Sunset canal bike ride, Westerkerk tower sunset\n  Types: cultural, scenic, active, scenic | Avg local score: 6.5 | Avg fit score: 0.87\nDay 2 (Peak Day): Dawn bike ride through Vondelpark, Keukenhof Gardens (seasonal, Apr-May only), Van Gogh Museum first entry, Stedelijk Museum contemporary art\n  Types: active, nature, cultural, cultural | Avg local score: 5.2 | Avg fit score: 0.85\nDay 3 (The Farewell Day): Rijksmuseum at opening hour, NEMO Science Museum rooftop terrace, Foam Photography Museum, Trpenmuseum (Tropics Museum)\n  Types: cultural, scenic, cultural, cultural | Avg local score: 5.5 | Avg fit score: 0.83\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Day 2 clusters two major museums back\u2011to\u2011back after a nature bike ride, reducing variety and risking fatigue.",
+        "Day 3 is heavily cultural with three museums and lacks a clear thematic thread or a memorable closing experience.",
+        "Food experiences are absent across all days, despite the traveler\u2019s neutral food interest.",
+        "Local immersion is modest; only the canal cruise mentions a local operator."
+      ],
+      "suggestions": [
+        "Day 2: Insert a short local food stop (e.g., a market or caf\u00e9 in the Museumplein area) between Van Gogh and Stedelijk to break up museum fatigue and boost local flavor.",
+        "Day 3: Reframe the day around \u2018Science & Creativity\u2019 by starting with NEMO, then a hands\u2011on workshop at Foam, and ending with a sunset dinner on the Rijksmuseum\u2019s terrace or a canal-side restaurant to create a memorable finale.",
+        "Consider swapping one museum on Day 3 (e.g., Tropics Museum) for a local neighborhood walk in De Pijp with street\u2011food tasting to raise the local score and add variety.",
+        "Add a brief evening activity on Day 1 (e.g., a guided tasting of traditional Dutch snacks near Westerkerk) to balance the cultural start with a taste of local cuisine."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

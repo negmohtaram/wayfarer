@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 9.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Foam Photography Museum, Indonesian rijsttafel dinner\n  Types: cultural, cultural, food | Avg local score: 6.3 | Avg fit score: 0.81\nDay 2 (Peak Day): Brouwerij 't IJ craft beer in a windmill, NEMO Science Museum rooftop terrace, Canal cruise with local operator Wetlands Safari\n  Types: food, scenic, scenic | Avg local score: 6.7 | Avg fit score: 0.82\nDay 3 (The Farewell Day): Morning coffee at a specialty third-wave cafe, Floating flower market on Singel canal, Begijnhof hidden courtyard\n  Types: food, serendipity, serendipity | Avg local score: 6.7 | Avg fit score: 0.83\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2 packs three distinct activities (brewery, rooftop terrace, canal cruise) which conflicts with the traveler's very slow pace (9/10).",
+        "Cultural depth is limited to Day 1; the traveler\u2019s moderate interest in culture (5/10) isn\u2019t fully satisfied across the itinerary.",
+        "Local immersion stays around the mid\u2011range (avg local scores 6.3\u20116.7) but could be higher for a traveler with a neutral local preference (5/10).",
+        "Food experiences are clustered (Day 1 dinner, Day 2 brewery, Day 3 coffee) and lack variety beyond a single dinner and a coffee stop.",
+        "The farewell day, while pleasant, ends with two serendipitous spots that may feel too low\u2011key to leave a lasting memory."
+      ],
+      "suggestions": [
+        "Spread Day 2 activities: keep the canal cruise as the highlight, but move the brewery visit to Day 1 (as an early\u2011afternoon stop) and replace the rooftop terrace with a leisurely walk in the Amsterdamse Bos or a park near the museum.",
+        "Add a second cultural touchpoint on Day 2 or 3, such as a short guided walk through the Jordaan district or a visit to the Rijksmuseum\u2019s highlights, to balance the cultural/food ratio.",
+        "Introduce a more local food experience, e.g., a lunch at a neighborhood \u2018eetcaf\u00e9\u2019 serving Dutch staples, or a tasting session at a local cheese shop, to diversify the food type.",
+        "For the farewell day, consider swapping the floating flower market for a sunrise walk along the Amstel followed by a brunch at a canal\u2011side caf\u00e9, then finish with the Begijnhof for a quiet, reflective close.",
+        "Include optional solo\u2011friendly downtime (e.g., a 30\u2011minute reading spot in a quiet library or a park bench) each day to honor the traveler\u2019s preference for a very relaxed pace."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "site": "disruption_analyzer",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "DisruptionAnalysis"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a travel replanner. Classify the traveler's disruption and identify which scheduled experiences are affected."
+    },
+    {
+      "role": "human",
+      "content": "Traveler reported: \"Our flight was delayed and we just arrived. We only have a few hours left today.\"\n\nRemaining schedule:\nDay 1: Jewish Historical Museum and Portuguese Synagogue, Floating flower market on Singel canal, Foam Photography Museum, Begijnhof hidden courtyard\nDay 2: Trpenmuseum (Tropics Museum), NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\nDay 3: Van Gogh Museum first entry, Rijksmuseum at opening hour, Canal cruise with local operator Wetlands Safari, Indonesian rijsttafel dinner"
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.agents.replan_graph:DisruptionAnalysis",
+    "data": {
+      "disruption_type": "delay",
+      "affected_experiences": [
+        "Jewish Historical Museum",
+        "Portuguese Synagogue",
+        "Floating flower market on Singel canal",
+        "Foam Photography Museum",
+        "Begijnhof hidden courtyard"
+      ],
+      "recommendation": "Since you have only a few hours left today, consider focusing on a compact area like the Jordaan district where the Jewish Historical Museum, Portuguese Synagogue, and Begijnhof are close together. You could skip the floating flower market and Foam Museum today and fit them into later days if possible."
+    }
+  }
+}

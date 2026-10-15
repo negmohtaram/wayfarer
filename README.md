@@ -4,7 +4,7 @@
 
 A multi-agent travel planner that cares about *who's traveling*, not just where.
 
-Most travel planners optimize for logistics. WAYFARER builds itineraries around the traveler's personality, energy, and what they'd regret missing. Every plan then goes through a panel of critic agents before the traveler sees it.
+Most travel planners optimize for logistics. WAYFARER builds itineraries around the traveler's personality, energy, and what they'd regret missing. Every plan then goes through a panel of critics before the traveler sees it.
 
 ## How it works
 
@@ -14,13 +14,36 @@ The system is a LangGraph pipeline with the following stages:
 2. **Experience Generator** - scores 30+ city experiences against the persona
 3. **Route & Energy Optimizer** - sequences the day using TSP nearest-neighbor, then reorders by energy curve (high-energy activities when the traveler is fresh)
 4. **Itinerary Assembler** - builds day-by-day plans with deliberate pacing (strong opener → peak experience → quiet farewell, inspired by Kahneman's Peak-End Rule)
-5. **Critic Panel** - 5 LLM agents run in parallel (`asyncio.gather`), each evaluating a different axis: logistics, experience fit, energy pacing, budget, and authenticity
-6. **Revision loop** - if any critic flags an issue, a revision agent patches the plan (max 2 cycles)
+5. **Critic Panel** - five critics check the plan in parallel (`asyncio.gather`). Logistics, energy pacing, budget and authenticity are rule-based checks. Experience fit is judged by the model.
+6. **Revision loop** - if a critic flags an issue, the flagged days are rebuilt with the same scheduler and checked again (max 2 cycles)
 7. **Highlight Ranker** - ranks the scheduled experiences into must-do / should-do / nice-to-have tiers
 
 A separate **Replan Graph** handles mid-trip disruptions (weather, closures, "I'm exhausted") by re-analyzing remaining days without touching completed ones.
 
 All intermediate outputs stream to the frontend via SSE.
+
+## Run it
+
+```bash
+python3 -m venv venv && source venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env    # add your Groq API key
+pytest -q
+```
+
+Plan a trip in the browser:
+
+```bash
+uvicorn src.api.main:app
+```
+
+Then open http://localhost:8000.
+
+Replay the baseline with no API key and no network. The recorded model and weather calls are in `eval_results/recordings/baseline_v1/`:
+
+```bash
+python -m src.evaluation.runner --mode replay --report
+```
 
 ## Evaluation (baseline_v1)
 

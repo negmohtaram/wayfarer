@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Tokyo.\n\nTraveler: family, pace 7.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Meiji Shrine morning visit, Yoyogi Park Sunday afternoon, Shibuya Crossing at night, Ramen at a standing counter at midnight\n  Types: cultural, passive, scenic, food | Avg local score: 6.5 | Avg fit score: 0.83\nDay 2 (Peak Day): Senso-ji Temple at 6am, Nezu Shrine torii gates in morning mist, Yanaka neighborhood wandering, Sumida River evening boat\n  Types: cultural, scenic, serendipity, scenic | Avg local score: 7.5 | Avg fit score: 0.88\nDay 3 (The Farewell Day): Tsukiji outer market breakfast, Hamarikyu Gardens tea ceremony, Depachika (department store basement food hall), Izakaya evening in Yurakucho under the tracks\n  Types: food, cultural, food, food | Avg local score: 7.0 | Avg fit score: 0.87\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 1 ends with a midnight standing\u2011ramen counter, which is late for a family and clashes with the traveler\u2019s moderate food interest (5/10). It also pushes the pace toward the fast end of a \u2018slow\u2011ish\u2019 (7/10) itinerary.",
+        "Day 3 is heavily food\u2011centric (3 out of 4 activities), exceeding the family\u2019s average food appetite and reducing variety after two culturally\u2011rich days.",
+        "Average local scores (6.5\u20117.5) are higher than the traveler\u2019s local preference (5), making several experiences feel too \u201clocal\u2011only\u201d for a moderate\u2011local traveler."
+      ],
+      "suggestions": [
+        "Replace the midnight ramen with an early\u2011evening family\u2011friendly izakaya or a casual yakitori spot that closes earlier, keeping the food experience but respecting the family\u2019s schedule.",
+        "Add a non\u2011food activity on Day 3 \u2013 e.g., a short visit to Odaiba\u2019s teamLab Borderless or a river\u2011side park walk \u2013 to rebalance variety and give a lighter cultural note before departure.",
+        "Dial back the local intensity on Day 1 and Day 2 by swapping one highly local spot (e.g., Yoyogi Park\u2019s Sunday crowd) for a more tourist\u2011friendly version like a guided walk in Harajuku\u2019s Takeshita\u2011dori, aligning with the 5/10 local preference."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        3
+      ]
+    }
+  }
+}

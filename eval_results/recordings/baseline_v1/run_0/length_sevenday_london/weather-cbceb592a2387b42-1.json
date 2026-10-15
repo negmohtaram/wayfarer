@@ -1,0 +1,63 @@
+{
+  "meta": {
+    "site": "weather",
+    "city": "london",
+    "start_date": "2026-09-10",
+    "days": 7
+  },
+  "messages": null,
+  "result": {
+    "kind": "json",
+    "data": [
+      {
+        "date": "2026-09-10",
+        "condition": "partly_cloudy",
+        "temp_high": 20.3,
+        "temp_low": 14.0,
+        "rain_probability": 48
+      },
+      {
+        "date": "2026-09-11",
+        "condition": "rainy",
+        "temp_high": 21.6,
+        "temp_low": 16.2,
+        "rain_probability": 76
+      },
+      {
+        "date": "2026-09-12",
+        "condition": "rainy",
+        "temp_high": 23.7,
+        "temp_low": 13.3,
+        "rain_probability": 4
+      },
+      {
+        "date": "2026-09-13",
+        "condition": "rainy",
+        "temp_high": 22.7,
+        "temp_low": 18.4,
+        "rain_probability": 100
+      },
+      {
+        "date": "2026-09-14",
+        "condition": "rainy",
+        "temp_high": 24.7,
+        "temp_low": 18.2,
+        "rain_probability": 28
+      },
+      {
+        "date": "2026-09-15",
+        "condition": "partly_cloudy",
+        "temp_high": 22.4,
+        "temp_low": 16.7,
+        "rain_probability": 4
+      },
+      {
+        "date": "2026-09-16",
+        "condition": "partly_cloudy",
+        "temp_high": 19.9,
+        "temp_low": 13.6,
+        "rain_probability": 31
+      }
+    ]
+  }
+}

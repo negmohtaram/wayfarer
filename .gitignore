@@ -34,5 +34,9 @@ data/
 *.swp
 *.swo
 sse_consumer.py
-eval_results/
+eval_results/*
+!eval_results/recordings/
+eval_results/recordings/*
+# Recorded calls of tagged baselines are kept so they replay without an API key
+!eval_results/recordings/baseline_v1/
 .pytest_cache/

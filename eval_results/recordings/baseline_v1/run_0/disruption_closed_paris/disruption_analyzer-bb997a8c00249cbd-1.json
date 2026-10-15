@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "site": "disruption_analyzer",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "DisruptionAnalysis"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a travel replanner. Classify the traveler's disruption and identify which scheduled experiences are affected."
+    },
+    {
+      "role": "human",
+      "content": "Traveler reported: \"The museum we planned to visit today is unexpectedly closed. We need to rearrange the day.\"\n\nRemaining schedule:\nDay 2: P\u00e8re Lachaise Cemetery contemplative walk, Belleville street art and view, \u00cele Saint-Louis evening walk and Berthillon ice cream, Natural wine bar evening in the 11th\nDay 3: Eiffel Tower at dawn (before crowds), Montmartre pre-dawn walk to Sacr\u00e9-C\u0153ur, Mus\u00e9e d'Orsay impressionist galleries, Luxembourg Gardens afternoon"
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.agents.replan_graph:DisruptionAnalysis",
+    "data": {
+      "disruption_type": "closed",
+      "affected_experiences": [
+        "Museum visit (unspecified)"
+      ],
+      "recommendation": "Consider substituting with a nearby alternative such as Mus\u00e9e d'Orsay on Day 3 or a local gallery in the 11th arrondissement."
+    }
+  }
+}

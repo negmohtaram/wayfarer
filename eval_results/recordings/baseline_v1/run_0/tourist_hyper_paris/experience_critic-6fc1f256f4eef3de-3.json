@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Paris.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 8.0/10,\nlocal preference 1.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Louvre at 9am Wednesday/Friday, Palais Royal gardens morning coffee, Falafel in the Jewish Quarter (Le Marais), Centre Pompidou and Stravinsky Fountain\n  Types: cultural, passive, food, cultural | Avg local score: 5.8 | Avg fit score: 0.76\nDay 2 (Peak Day): Eiffel Tower at dawn (before crowds), Mus\u00e9e d'Orsay impressionist galleries, Saint-Germain literary cafe morning, Luxembourg Gardens afternoon\n  Types: scenic, cultural, food, passive | Avg local score: 4.5 | Avg fit score: 0.77\nDay 3 (The Farewell Day): Montmartre pre-dawn walk to Sacr\u00e9-C\u0153ur, P\u00e8re Lachaise Cemetery contemplative walk, March\u00e9 d'Aligre morning market, Natural wine bar evening in the 11th\n  Types: scenic, passive, food, food | Avg local score: 7.9 | Avg fit score: 0.69\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 3 leans heavily toward local experiences (average local score 7.9) which conflicts with the traveler's low local preference (1/10).",
+        "The food focus on Day 3 (market + natural wine bar) exceeds the traveler's moderate food interest (5/10) and creates a food\u2011heavy afternoon.",
+        "Ending on a cemetery and a market lacks a memorable, uplifting finale for a solo traveler; a more iconic or celebratory closing would feel stronger."
+      ],
+      "suggestions": [
+        "Replace the March\u00e9 d'Aligre visit with a classic Parisian brasserie or a pastry stop near the Seine to keep food interest moderate and less local.",
+        "Swap the P\u00e8re Lachaise Cemetery walk for a sunset Seine river cruise or a rooftop view (e.g., Terrass'' Hotel in Montmartre) to provide a memorable, scenic finale.",
+        "Keep the natural wine bar but schedule it earlier in the evening and pair it with a light dinner at a nearby bistro, reducing the overall food density.",
+        "Add a brief reflective activity that ties back to the cultural theme\u2014e.g., a short visit to the Sacr\u00e9\u2011C\u0153ur\u2019s art exhibition\u2014so the farewell day still feels culturally resonant."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        3
+      ]
+    }
+  }
+}

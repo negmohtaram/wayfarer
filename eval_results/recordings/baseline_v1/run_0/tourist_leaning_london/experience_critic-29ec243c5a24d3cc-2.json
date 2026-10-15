@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for London.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 7.0/10,\nlocal preference 3.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Millennium Bridge walk at dawn, St Paul's to Tate, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday, Tate Modern Turbine Hall and Level 10 viewing gallery, Borough Market on a weekday morning\n  Types: scenic, cultural, cultural, food | Avg local score: 3.8 | Avg fit score: 0.83\nDay 2 (Peak Day): Maltby Street Market Saturday morning under the arches, Bermondsey Beer Mile on a Saturday, Padella pasta on Borough High Street, pre-5pm, Greenwich Park Observatory at golden hour\n  Types: food, food, food, scenic | Avg local score: 7.2 | Avg fit score: 0.75\nDay 3 (The Farewell Day): Primrose Hill at sunrise for the London panorama, Regent's Canal towpath from Little Venice to Broadway Market, Hackney Wick canal walk and Crate Brewery, Dennis Severs' House candlelit evening, Spitalfields\n  Types: scenic, active, active, cultural | Avg local score: 7.6 | Avg fit score: 0.77\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2 is heavily food\u2011centric (three food stops) and scores a high local preference (7.2) while the traveler prefers low local immersion (3). It also lacks cultural experiences despite the traveler's strong culture interest (7).",
+        "Day 3 leans toward active, locally\u2011focused activities (canal walks, Hackney Wick, Spitalfields) with a high local score (7.6). The pace may feel brisk for a solo traveler who prefers a moderate pace (5). Cultural content is limited to a single evening house.",
+        "Overall the itinerary\u2019s local intensity (average >7 on Days 2\u20113) exceeds the traveler\u2019s low local preference, and the cultural balance is uneven."
+      ],
+      "suggestions": [
+        "Replace one of the food stops on Day 2 (e.g., Maltby Street Market) with a cultural venue such as the Design Museum or a guided tour of the historic Greenwich Royal Observatory interior, keeping the golden\u2011hour view.",
+        "Add a mid\u2011day cultural bite on Day 2 \u2013 perhaps a quick visit to the National Maritime Museum or a short exhibition at the Queen's House \u2013 to raise the cultural quotient without over\u2011loading the schedule.",
+        "On Day 3, swap the Hackney Wick canal walk for a more iconic cultural experience, like a late\u2011afternoon visit to the Victoria & Albert Museum or a guided walk through the historic Camden Market (still scenic but less locally\u2011focused).",
+        "Consider reducing the total walking distance on Day 3 (e.g., limit the Regent's Canal towpath to Little Venice to Camden) to align with the traveler\u2019s moderate pace.",
+        "Overall, temper the local\u2011heavy elements by inserting a few well\u2011known London landmarks (e.g., Tower of London, Westminster Abbey) that satisfy cultural interest while keeping the local score nearer to the traveler\u2019s 3\u2011point preference."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

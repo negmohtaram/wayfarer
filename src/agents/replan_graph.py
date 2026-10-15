@@ -7,6 +7,7 @@ from langgraph.graph import StateGraph, START, END
 from pydantic import BaseModel, Field
 
 from src.agents.state import ReplanningState
+from src.evaluation.recording import note_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
         state["log"].append(f"🔄 Disruption classified as: {result.disruption_type}")
     except Exception as e:
         logger.warning("Disruption analysis failed: %s", e)
+        note_fallback("disruption_analyzer", e)
         state["disruption_analysis"] = {}
 
     return state

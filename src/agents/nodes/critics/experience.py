@@ -1,6 +1,7 @@
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agents.llm import call_with_retry, get_llm
+from src.evaluation.recording import note_fallback
 from src.config import GROQ_MODEL
 from src.models.itinerary import CritiqueResult, Itinerary
 
@@ -63,7 +64,8 @@ List specific issues and concrete suggestions. affected_days should be day numbe
             meta={"site": "experience_critic", "model": GROQ_MODEL, "temperature": 0.3, "schema": "CritiqueResult"},
         )
         return result
-    except Exception:
+    except Exception as exc:
+        note_fallback("experience_critic", exc)
         return _fallback_critique(itinerary)
 
 

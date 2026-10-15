@@ -9,12 +9,35 @@ from src.config import GROQ_API_KEY, GROQ_MODEL
 logger = logging.getLogger(__name__)
 
 
-def get_llm(temperature: float = 0.7) -> ChatGroq:
-    return ChatGroq(
-        api_key=GROQ_API_KEY,
-        model=GROQ_MODEL,
-        temperature=temperature,
-    )
+class LazyModel:
+    """A Groq chat model that is only built when it is first called.
+
+    Building ChatGroq fails without an API key. Deferring it to ainvoke keeps that failure
+    inside call_with_retry, where the recorder sees it, and lets replays run with no key.
+    """
+
+    def __init__(self, temperature: float, steps: tuple = ()):
+        self.temperature = temperature
+        self.steps = steps                     # (method, args, kwargs) applied after building
+
+    def with_structured_output(self, *args: Any, **kwargs: Any) -> "LazyModel":
+        return LazyModel(self.temperature, self.steps + (("with_structured_output", args, kwargs),))
+
+    def bind_tools(self, *args: Any, **kwargs: Any) -> "LazyModel":
+        return LazyModel(self.temperature, self.steps + (("bind_tools", args, kwargs),))
+
+    def build(self) -> Any:
+        model: Any = ChatGroq(api_key=GROQ_API_KEY, model=GROQ_MODEL, temperature=self.temperature)
+        for method, args, kwargs in self.steps:
+            model = getattr(model, method)(*args, **kwargs)
+        return model
+
+    async def ainvoke(self, *args: Any, **kwargs: Any) -> Any:
+        return await self.build().ainvoke(*args, **kwargs)
+
+
+def get_llm(temperature: float = 0.7) -> LazyModel:
+    return LazyModel(temperature)
 
 
 async def call_with_retry(

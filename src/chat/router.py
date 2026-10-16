@@ -105,7 +105,8 @@ async def route_message(text: str, trip_days: int, allowed: list[Intent] | None 
 def _feedback(reply: AIMessage, error: str) -> list[BaseMessage]:
     """Tell the model what was wrong; the traveler's message stays unchanged."""
     note = f"Invalid route_message call: {error}. Call route_message again with valid arguments."
-    calls = reply.tool_calls or []
+    # Broken JSON lands in invalid_tool_calls; those calls need an answer too.
+    calls = (reply.tool_calls or []) + (getattr(reply, "invalid_tool_calls", None) or [])
     if not calls:
         return [reply, SystemMessage(note)]
     # Every tool call needs an answer with its id, or the API rejects the next request.

@@ -71,7 +71,7 @@ def _decode(stored: dict) -> Any:
 
 class Recorder:
     def __init__(self, mode: str, folder: Path):
-        if mode not in ("record", "replay"):
+        if mode not in ("record", "replay", "resume"):   # resume: replay what exists, record the rest
             raise ValueError(mode)
         self.mode, self.folder = mode, Path(folder)
         self.seen: dict[str, int] = {}
@@ -90,6 +90,9 @@ class Recorder:
     async def call(self, meta: dict, messages: Any, live: Callable[[], Awaitable[Any]]) -> Any:
         key = self.key(meta, messages)
         path = self.folder / f"{key}.json"
+        if self.mode == "resume" and path.exists():
+            self.replayed += 1
+            return _decode(json.loads(path.read_text())["result"])
         if self.mode == "replay":
             if not path.exists():
                 self.failures.append(f"{meta.get('site', 'call')}: no recording")

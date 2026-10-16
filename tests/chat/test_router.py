@@ -78,3 +78,13 @@ def test_router_forces_the_one_tool_and_offers_only_allowed_intents():
     assert model.tool_choice == "route_message"
     enum = model.tools[0]["function"]["parameters"]["properties"]["intent"]["enum"]
     assert enum == ["ask", "none_of_these"]
+
+
+def test_broken_json_call_is_answered_with_its_id_on_retry():
+    broken = AIMessage(content="", invalid_tool_calls=[
+        {"name": "route_message", "args": '{"intent": "ask"', "id": "bad1", "error": "bad json"}])
+    model = FakeModel(broken, tool_reply(intent="ask"))
+    route = asyncio.run(route_message("is it far?", trip_days=3, llm=model))
+    assert route.intent is Intent.ASK
+    answer = model.sent[1][-1]
+    assert isinstance(answer, ToolMessage) and answer.tool_call_id == "bad1"

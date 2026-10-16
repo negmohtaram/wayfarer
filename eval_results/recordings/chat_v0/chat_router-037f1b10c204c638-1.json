@@ -33,7 +33,7 @@
         "reasoning_content": "We need to route the message. The traveler says \"Day 1 is boring, add more food places\". Intent: they want to change the itinerary (add more food places). That is a \"change_setting\" intent (modifying plan). Day is specific: day 1. So call route_message with day=1, intent=\"change_setting\".",
         "tool_calls": [
           {
-            "id": "fc_76a7d8f9-46b0-4ae3-8cc5-fc0574300841",
+            "id": "fc_fcf905dc-1e03-4961-93f3-ea2197503c6d",
             "function": {
               "arguments": "{\"day\":1,\"intent\":\"change_setting\"}",
               "name": "route_message"
@@ -47,17 +47,17 @@
           "completion_tokens": 107,
           "prompt_tokens": 248,
           "total_tokens": 355,
-          "completion_time": 0.228926911,
+          "completion_time": 0.227282664,
           "completion_tokens_details": {
             "reasoning_tokens": 72
           },
-          "prompt_time": 0.013955524,
+          "prompt_time": 0.066740072,
           "prompt_tokens_details": null,
-          "queue_time": 0.242952636,
-          "total_time": 0.242882435
+          "queue_time": 0.180242103,
+          "total_time": 0.294022736
         },
         "model_name": "openai/gpt-oss-120b",
-        "system_fingerprint": "fp_e1a78f200e",
+        "system_fingerprint": "fp_c800245357",
         "service_tier": "on_demand",
         "finish_reason": "tool_calls",
         "logprobs": null,
@@ -65,7 +65,7 @@
       },
       "type": "ai",
       "name": null,
-      "id": "lc_run--01a14538-d962-7843-b114-fb1d49a5952b-0",
+      "id": "lc_run--01a14546-72cd-7462-b4cb-99fd936a93f3-0",
       "tool_calls": [
         {
           "name": "route_message",
@@ -73,7 +73,7 @@
             "day": 1,
             "intent": "change_setting"
           },
-          "id": "fc_76a7d8f9-46b0-4ae3-8cc5-fc0574300841",
+          "id": "fc_fcf905dc-1e03-4961-93f3-ea2197503c6d",
           "type": "tool_call"
         }
       ],

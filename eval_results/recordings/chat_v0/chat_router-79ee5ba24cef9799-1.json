@@ -30,10 +30,10 @@
     "data": {
       "content": "",
       "additional_kwargs": {
-        "reasoning_content": "We need to route message. Intent: traveler wants to change budget setting. That's \"change_setting\". No specific day mentioned, just daily budget overall. So day omitted. Call route_message with intent \"change_setting\".",
+        "reasoning_content": "We need to route message. Intent: traveler wants to change budget setting. That's \"change_setting\". No specific day mentioned, just daily budget overall. So day not set. Call route_message with intent \"change_setting\".",
         "tool_calls": [
           {
-            "id": "fc_5f36c4f9-20bc-4393-945f-4ecc1214475d",
+            "id": "fc_b4331dc4-fd56-4b70-8647-dbf6c32a3542",
             "function": {
               "arguments": "{\"intent\":\"change_setting\"}",
               "name": "route_message"
@@ -44,20 +44,20 @@
       },
       "response_metadata": {
         "token_usage": {
-          "completion_tokens": 72,
+          "completion_tokens": 73,
           "prompt_tokens": 250,
-          "total_tokens": 322,
-          "completion_time": 0.152052685,
+          "total_tokens": 323,
+          "completion_time": 0.154956416,
           "completion_tokens_details": {
-            "reasoning_tokens": 44
+            "reasoning_tokens": 45
           },
-          "prompt_time": 0.010221042,
+          "prompt_time": 0.012392399,
           "prompt_tokens_details": null,
-          "queue_time": 0.199989186,
-          "total_time": 0.162273727
+          "queue_time": 0.119089412,
+          "total_time": 0.167348815
         },
         "model_name": "openai/gpt-oss-120b",
-        "system_fingerprint": "fp_76082d2bd0",
+        "system_fingerprint": "fp_e1a78f200e",
         "service_tier": "on_demand",
         "finish_reason": "tool_calls",
         "logprobs": null,
@@ -65,24 +65,24 @@
       },
       "type": "ai",
       "name": null,
-      "id": "lc_run--01a14538-9c0b-70a3-96e9-4a6ba9f9edba-0",
+      "id": "lc_run--01a14543-6215-7d52-8525-ca60d75395b2-0",
       "tool_calls": [
         {
           "name": "route_message",
           "args": {
             "intent": "change_setting"
           },
-          "id": "fc_5f36c4f9-20bc-4393-945f-4ecc1214475d",
+          "id": "fc_b4331dc4-fd56-4b70-8647-dbf6c32a3542",
           "type": "tool_call"
         }
       ],
       "invalid_tool_calls": [],
       "usage_metadata": {
         "input_tokens": 250,
-        "output_tokens": 72,
-        "total_tokens": 322,
+        "output_tokens": 73,
+        "total_tokens": 323,
         "output_token_details": {
-          "reasoning": 44
+          "reasoning": 45
         }
       }
     }

@@ -30,10 +30,10 @@
     "data": {
       "content": "",
       "additional_kwargs": {
-        "reasoning_content": "We need to route message. The traveler says \"Day 2 feels way too rushed\". This is feedback about a specific day. Intent: feedback. Day: 2. So call route_message with day=2, intent=\"feedback\".",
+        "reasoning_content": "We need to route message. The traveler says \"Day 2 feels way too rushed\". This is feedback about a specific day. Intent: feedback. Day is 2. So call route_message with day:2, intent:\"feedback\".",
         "tool_calls": [
           {
-            "id": "fc_6a23ea26-9748-444a-9474-118c6dffff63",
+            "id": "fc_b000640c-de30-45bb-a045-d8eace7cd5a2",
             "function": {
               "arguments": "{\"day\":2,\"intent\":\"feedback\"}",
               "name": "route_message"
@@ -47,17 +47,17 @@
           "completion_tokens": 83,
           "prompt_tokens": 245,
           "total_tokens": 328,
-          "completion_time": 0.1789833,
+          "completion_time": 0.175739773,
           "completion_tokens_details": {
             "reasoning_tokens": 49
           },
-          "prompt_time": 0.0102299,
+          "prompt_time": 0.0120159,
           "prompt_tokens_details": null,
-          "queue_time": 0.230071326,
-          "total_time": 0.1892132
+          "queue_time": 0.243718258,
+          "total_time": 0.187755673
         },
         "model_name": "openai/gpt-oss-120b",
-        "system_fingerprint": "fp_86dc843b12",
+        "system_fingerprint": "fp_27194a498a",
         "service_tier": "on_demand",
         "finish_reason": "tool_calls",
         "logprobs": null,
@@ -65,7 +65,7 @@
       },
       "type": "ai",
       "name": null,
-      "id": "lc_run--01a14538-a46f-7ef1-8ce2-b97a681c2440-0",
+      "id": "lc_run--01a14546-fed8-72d1-b283-4e764bc77982-0",
       "tool_calls": [
         {
           "name": "route_message",
@@ -73,7 +73,7 @@
             "day": 2,
             "intent": "feedback"
           },
-          "id": "fc_6a23ea26-9748-444a-9474-118c6dffff63",
+          "id": "fc_b000640c-de30-45bb-a045-d8eace7cd5a2",
           "type": "tool_call"
         }
       ],

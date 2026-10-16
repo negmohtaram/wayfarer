@@ -85,6 +85,7 @@ async def replan_assembler_node(state: ReplanningState) -> ReplanningState:
     from src.optimization.route import optimize_route, cluster_by_day
     from src.optimization.energy import sequence_by_energy, get_day_start_time
     from src.knowledge.rag import get_city_experiences, get_city_coordinates
+    from src.models.constraints import wheelchair_ok
     from datetime import datetime
 
     state.setdefault("log", [])
@@ -126,7 +127,7 @@ async def replan_assembler_node(state: ReplanningState) -> ReplanningState:
                 done_ids.add(sched.experience.id)
 
     all_exps = get_city_experiences(persona.destination.lower())
-    available = [e for e in all_exps if e.id not in done_ids]
+    available = [e for e in all_exps if e.id not in done_ids and wheelchair_ok(e, persona)]
 
     # Apply disruption-type-aware filtering
     if disruption_type == "weather":

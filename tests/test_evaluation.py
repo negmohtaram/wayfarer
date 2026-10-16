@@ -220,6 +220,14 @@ def test_accessibility_wheelchair_high_intensity_fails():
     assert any(not r.passed and r.code == "ACCESSIBILITY_RESPECTED" for r in results)
 
 
+def test_accessibility_wheelchair_medium_intensity_fails():
+    persona = make_persona(physical_constraints=["wheelchair"])
+    exp = make_experience(physical_intensity="medium")
+    itin = make_itinerary([make_day(1, [make_scheduled(exp, "09:00", "10:00")])], persona)
+    scenario = make_scenario(persona=persona)
+    results = validate_accessibility(itin, scenario)
+    assert any(not r.passed and r.code == "ACCESSIBILITY_RESPECTED" for r in results)
+
 def test_accessibility_wheelchair_low_intensity_ok():
     persona = make_persona(physical_constraints=["wheelchair"])
     exp = make_experience(physical_intensity="low")

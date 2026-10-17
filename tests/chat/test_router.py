@@ -88,3 +88,25 @@ def test_broken_json_call_is_answered_with_its_id_on_retry():
     assert route.intent is Intent.ASK
     answer = model.sent[1][-1]
     assert isinstance(answer, ToolMessage) and answer.tool_call_id == "bad1"
+
+
+@pytest.mark.parametrize("ref, trip_days, day", [
+    ("last", 4, 4), ("last", 3, 3), ("first", 4, 1), ("middle", 5, 3), ("middle", 4, None),
+])
+def test_day_ref_is_resolved_by_code_from_the_trip_length(ref, trip_days, day):
+    route = parse_route(tool_reply(intent="change_setting", day_ref=ref), ALL, trip_days=trip_days)
+    assert route.day == day and route.day_ref.value == ref
+
+
+def test_day_and_day_ref_that_disagree_are_rejected():
+    with pytest.raises(RouterError, match="does not match"):
+        parse_route(tool_reply(intent="feedback", day=3, day_ref="last"), ALL, trip_days=4)
+
+
+def test_prompt_states_the_trip_length_and_v0_stays_unchanged():
+    from src.chat.router import SYSTEM_V0, system_prompt
+    assert "The trip has 4 days." in system_prompt(4)
+    assert system_prompt(4, "v0") == SYSTEM_V0
+    model = FakeModel(tool_reply(intent="ask"))
+    asyncio.run(route_message("is it far?", trip_days=3, llm=model, prompt="v0"))
+    assert "day_ref" not in model.tools[0]["function"]["parameters"]["properties"]

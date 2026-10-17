@@ -11,23 +11,35 @@ import time
 from collections import Counter
 from pathlib import Path
 
+from src.chat.examples import ExampleBank, render_examples
 from src.chat.router import Intent, route_message
 from src.evaluation.chat_messages import CHAT_MESSAGES
+from src.evaluation.chat_messages_lisbon import LISBON_MESSAGES
+from src.evaluation.chat_messages_lisbon import TRIP_DAYS as LISBON_DAYS
 from src.evaluation.recording import recording
 from src.evaluation.stats import cluster_bootstrap_ci
 
-FOLDER = Path("eval_results/recordings/chat_v0")
-REPORT = Path("eval_results/chat_router_report.json")
+SETS = {"amsterdam": (CHAT_MESSAGES, 3), "lisbon": (LISBON_MESSAGES, LISBON_DAYS)}
+NEAR_COPY = 0.8     # a test message this similar to a bank message is reported separately
 
 
-async def run(pause: float, trip_days: int = 3) -> list[dict]:
+def condition(name: str, prompt: str, retrieval: bool) -> str:
+    # The first run (Amsterdam, v0, no retrieval) keeps its original folder and report names.
+    if (name, prompt, retrieval) == ("amsterdam", "v0", False):
+        return "v0"
+    return f"{name}_{prompt}" + ("_retrieval" if retrieval else "")
+
+
+async def run(messages: list, trip_days: int, pause: float, prompt: str = "v0",
+              bank: ExampleBank | None = None) -> list[dict]:
     rows = []
-    for n, (text, intent, day, tag) in enumerate(CHAT_MESSAGES, 1):
+    for n, (text, intent, day, tag) in enumerate(messages, 1):
         start = time.perf_counter()
-        route = await route_message(text, trip_days=trip_days)
+        examples = render_examples(bank.retrieve(text)) if bank else None
+        route = await route_message(text, trip_days=trip_days, prompt=prompt, examples=examples)
         ok_intent = route.intent.value == intent
         ok = ok_intent and route.day == day
-        rows.append({"text": text, "intent": intent, "day": day, "tag": tag,
+        rows.append({"text": text, "intent": intent, "day": day, "tag": tag, "got_day_ref": route.day_ref,
                      "got_intent": route.intent.value, "got_day": route.day,
                      "error": route.error, "ok_intent": ok_intent, "ok": ok})
         mark = "✓" if ok else ("~" if ok_intent else "✗")
@@ -82,15 +94,34 @@ def report(rows: list[dict]) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["record", "replay", "resume"], default="replay")
+    parser.add_argument("--set", choices=list(SETS), default="amsterdam")
+    parser.add_argument("--prompt", choices=["v0", "v1"], default="v0")
+    parser.add_argument("--retrieval", action="store_true", help="add similar labelled examples")
     parser.add_argument("--pause", type=float, default=3.0, help="seconds between live calls")
     args = parser.parse_args()
-    with recording(args.mode, FOLDER) as rec:
-        rows = asyncio.run(run(args.pause if args.mode != "replay" else 0))
+    if args.set == "amsterdam" and args.retrieval:
+        raise SystemExit("the Amsterdam set is the example bank: testing on it would leak")
+    messages, trip_days = SETS[args.set]
+    name = condition(args.set, args.prompt, args.retrieval)
+    folder = Path(f"eval_results/recordings/chat_{name}")
+    out_path = Path("eval_results/chat_router_report.json" if name == "v0"
+                    else f"eval_results/chat_router_{name}.json")
+    bank = ExampleBank() if args.retrieval or args.set != "amsterdam" else None
+    with recording(args.mode, folder) as rec:
+        rows = asyncio.run(run(messages, trip_days, args.pause if args.mode != "replay" else 0,
+                               args.prompt, bank if args.retrieval else None))
+    if bank:
+        for row in rows:
+            row["closest_in_bank"] = round(bank.closest(row["text"])[0], 3)
+        near = [r for r in rows if r["closest_in_bank"] >= NEAR_COPY]
+        rest = [r for r in rows if r["closest_in_bank"] < NEAR_COPY]
+        print(f"Near copies of a bank message (similarity >= {NEAR_COPY}): {len(near)}; "
+              f"intent correct without them: {sum(r['ok_intent'] for r in rest)}/{len(rest)}")
     out = report(rows)
-    out.update(live_calls=rec.calls, replayed=rec.replayed, failed_calls=len(rec.failures))
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(out, indent=2))
-    print(f"live calls {rec.calls} · replayed {rec.replayed} · failed {len(rec.failures)} · saved {REPORT}")
+    out.update(condition=name, live_calls=rec.calls, replayed=rec.replayed, failed_calls=len(rec.failures))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(out, indent=2, default=str))
+    print(f"live calls {rec.calls} · replayed {rec.replayed} · failed {len(rec.failures)} · saved {out_path}")
 
 
 if __name__ == "__main__":

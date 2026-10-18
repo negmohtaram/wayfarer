@@ -41,3 +41,4 @@ eval_results/recordings/*
 !eval_results/recordings/baseline_v1/
 !eval_results/recordings/chat_v0/
 .pytest_cache/
+!eval_results/recordings/chat_*/

@@ -3,8 +3,10 @@
 The router only names the intent and, when the message is about one day, that day.
 Values ("€60 a day") are read later by the extractor for that intent.
 """
+import json
 import logging
 from enum import Enum
+from functools import partial
 from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
@@ -138,7 +140,7 @@ async def route_message(text: str, trip_days: int, allowed: list[Intent] | None 
 
     error = ""
     for attempt in range(2):
-        reply = await call_with_retry(model.ainvoke, messages, meta=meta)
+        reply = await call_with_retry(partial(_invoke, model), messages, meta=meta)
         try:
             return parse_route(reply, allowed, trip_days)
         except RouterError as exc:
@@ -146,6 +148,39 @@ async def route_message(text: str, trip_days: int, allowed: list[Intent] | None 
             logger.warning("router output rejected (attempt %d): %s", attempt + 1, error)
             messages = messages + _feedback(reply, error)
     return Route(intent=Intent.NONE_OF_THESE, error=error)
+
+
+async def _invoke(model: Any, messages: list[BaseMessage]) -> AIMessage:
+    """The provider checks tool arguments against the schema itself and answers a bad call
+    with a 400. That is the model's output failing, so it is returned as the call the model
+    made: the router then rejects it, feeds the error back and retries like any invalid call,
+    and the reply is recorded like any other."""
+    try:
+        return await model.ainvoke(messages)
+    except Exception as exc:
+        rejected = _rejected_tool_call(exc)
+        if rejected is None:
+            raise
+        return rejected
+
+
+def _rejected_tool_call(exc: Exception) -> AIMessage | None:
+    if getattr(exc, "status_code", None) != 400:
+        return None
+    body = getattr(exc, "body", None)
+    error = body.get("error", body) if isinstance(body, dict) else {}
+    if not isinstance(error, dict) or error.get("code") != "tool_use_failed":
+        return None
+    generated = error.get("failed_generation") or ""
+    try:
+        call = json.loads(generated)
+        args = call.get("arguments") or {}
+        if isinstance(args, str):
+            args = json.loads(args)
+        return AIMessage(content="", tool_calls=[{"name": call.get("name", ""), "args": args,
+                                                  "id": "rejected_call", "type": "tool_call"}])
+    except (json.JSONDecodeError, AttributeError):
+        return AIMessage(content=generated)
 
 
 def _feedback(reply: AIMessage, error: str) -> list[BaseMessage]:

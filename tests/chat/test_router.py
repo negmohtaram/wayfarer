@@ -110,3 +110,38 @@ def test_prompt_states_the_trip_length_and_v0_stays_unchanged():
     model = FakeModel(tool_reply(intent="ask"))
     asyncio.run(route_message("is it far?", trip_days=3, llm=model, prompt="v0"))
     assert "day_ref" not in model.tools[0]["function"]["parameters"]["properties"]
+
+
+class RejectedByProvider(Exception):
+    """Shaped like the provider SDK's 400 when a tool call fails its schema check."""
+    status_code = 400
+
+    def __init__(self, generated):
+        super().__init__("Error code: 400 - tool_use_failed")
+        self.body = {"error": {"code": "tool_use_failed", "failed_generation": generated}}
+
+
+class RejectsFirst(FakeModel):
+    async def ainvoke(self, messages):
+        self.sent.append(messages)
+        if len(self.sent) == 1:
+            raise RejectedByProvider('{"name": "route_message", "arguments": {"intent": "none_of_theses"}}')
+        return self.replies.pop(0)
+
+
+def test_a_call_the_provider_rejects_is_fed_back_like_any_invalid_call():
+    model = RejectsFirst(tool_reply(intent="none_of_these"))
+    route = asyncio.run(route_message("Right, right.", trip_days=4, llm=model))
+    assert route.intent is Intent.NONE_OF_THESE and route.error is None
+    assert len(model.sent) == 2                                  # one retry, no blind repeats
+    note = model.sent[1][-1]
+    assert isinstance(note, ToolMessage) and "none_of_theses" in note.content
+
+
+def test_other_provider_errors_still_raise():
+    class Down(FakeModel):
+        async def ainvoke(self, messages):
+            raise ConnectionError("provider down")
+
+    with pytest.raises(ConnectionError):
+        asyncio.run(route_message("hi", trip_days=3, llm=Down()))

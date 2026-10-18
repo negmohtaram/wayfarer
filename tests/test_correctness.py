@@ -316,3 +316,43 @@ def test_disruption_analysis_rejects_invalid_type():
     from src.agents.replan_graph import DisruptionAnalysis
     with pytest.raises(Exception):
         DisruptionAnalysis(disruption_type="alien_invasion")
+
+
+# ── Accessibility in replanning ──────────────────────────────────────────────
+
+def test_replan_never_gives_wheelchair_user_an_inaccessible_stop(monkeypatch):
+    from src.agents import replan_graph
+    import src.agents.nodes.assembler as assembler
+    import src.knowledge.rag as rag
+
+    persona = make_persona(physical_constraints=["wheelchair"], trip_days=2,
+                           culture_importance=10, local_vs_tourist=10)
+    # The medium-intensity stop is the best match on every preference term,
+    # so only an explicit filter can keep it out.
+    catalogue = [
+        make_experience(id="stairs", name="Canal house with steep stairs",
+                        physical_intensity="medium", local_score=10.0,
+                        energy_required=5.0, crowd_level=1.0),
+    ] + [
+        make_experience(id=f"flat{i}", name=f"Flat stop {i}",
+                        physical_intensity="low", local_score=2.0)
+        for i in range(8)
+    ]
+    monkeypatch.setattr(rag, "get_city_experiences", lambda city: catalogue)
+
+    async def no_weather(city, start_date, days):
+        return [None] * days
+    monkeypatch.setattr(assembler, "fetch_weather", no_weather)
+
+    done = ScheduledExperience(experience=make_experience(id="done"),
+                               start_time="09:00", end_time="10:00")
+    itinerary = make_itinerary([make_day(1, [done]), make_day(2, [])], persona)
+    state = {"itinerary": itinerary, "persona": persona, "completed_day_indices": [0],
+             "disruption": "running late", "disruption_analysis": {"disruption_type": "other"}}
+
+    result = asyncio.run(replan_graph.replan_assembler_node(state))
+
+    day2 = result["itinerary"].days[1]
+    assert day2.experiences, "replan should still schedule accessible stops"
+    assert all(se.experience.physical_intensity == "low" for se in day2.experiences)
+

@@ -13,6 +13,7 @@ Severity:
 """
 
 from src.evaluation.models import EvaluationScenario, ValidationResult
+from src.models.constraints import wheelchair_ok
 from src.models.itinerary import Itinerary
 from src.optimization.energy import time_to_minutes
 from src.optimization.route import travel_time_minutes
@@ -169,22 +170,20 @@ def validate_trip_budget(
 def validate_accessibility(
     itinerary: Itinerary, scenario: EvaluationScenario
 ) -> list[ValidationResult]:
-    constraints = scenario.persona.physical_constraints
     results = []
 
-    if "wheelchair" in constraints:
-        for day in itinerary.days:
-            for se in day.experiences:
-                if se.experience.physical_intensity == "high":
-                    results.append(_fail(
-                        "ACCESSIBILITY_RESPECTED",
-                        f"Day {day.day_number}: '{se.experience.name}' has high physical intensity "
-                        f"but persona uses wheelchair",
-                        day=day.day_number,
-                        affected_ids=[se.experience.id],
-                        observed="physical_intensity=high",
-                        expected="physical_intensity ∈ {low, medium}",
-                    ))
+    for day in itinerary.days:
+        for se in day.experiences:
+            if not wheelchair_ok(se.experience, scenario.persona):
+                results.append(_fail(
+                    "ACCESSIBILITY_RESPECTED",
+                    f"Day {day.day_number}: '{se.experience.name}' has "
+                    f"{se.experience.physical_intensity} physical intensity but persona uses wheelchair",
+                    day=day.day_number,
+                    affected_ids=[se.experience.id],
+                    observed=f"physical_intensity={se.experience.physical_intensity}",
+                    expected="physical_intensity=low",
+                ))
 
     if not results:
         return [_ok("ACCESSIBILITY_RESPECTED", "Accessibility constraints respected")]

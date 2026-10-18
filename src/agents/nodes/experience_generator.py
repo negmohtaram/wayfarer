@@ -2,6 +2,7 @@ from src.agents.state import PlanningState
 from src.knowledge.rag import get_city_experiences
 from src.models.experience import Experience
 from src.models.persona import TravelerPersona
+from src.models.constraints import wheelchair_ok
 from src.config import EXPERIENCE_POOL_MULTIPLIER
 
 
@@ -99,8 +100,7 @@ async def experience_generator_node(state: PlanningState) -> PlanningState:
     scored.sort(key=lambda e: e.persona_score or 0, reverse=True)
 
     # Filter out experiences that are completely wrong (accessibility)
-    if "wheelchair" in persona.physical_constraints:
-        scored = [e for e in scored if e.physical_intensity == "low"]
+    scored = [e for e in scored if wheelchair_ok(e, persona)]
 
     # Ensure variety across types
     experience_pool = _ensure_variety(scored, persona)

@@ -96,3 +96,16 @@ def test_weather_is_recorded_and_replayed_offline(tmp_path, monkeypatch):
     with recording("replay", tmp_path):
         rep = run(assembler.fetch_weather("Paris", "2026-11-02", 1))
     assert rep == rec and calls == ["Paris"]
+
+
+def test_resume_reuses_saved_calls_and_records_only_the_missing_ones(tmp_path):
+    first = FakeModel(critique(7.5))
+    with recording("record", tmp_path):
+        saved = run(call_with_retry(first.ainvoke, MSGS, meta=META))
+    other = [SystemMessage("You are a critic."), HumanMessage("Evaluate day 2.")]
+    live = FakeModel(critique(4.0, "revise"))
+    with recording("resume", tmp_path) as rec:
+        again = run(call_with_retry(live.ainvoke, MSGS, meta=META))
+        new = run(call_with_retry(live.ainvoke, other, meta=META))
+    assert again == saved and new.verdict == "revise"
+    assert live.calls == 1 and rec.replayed == 1 and rec.calls == 1

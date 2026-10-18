@@ -39,4 +39,6 @@ eval_results/*
 eval_results/recordings/*
 # Recorded calls of tagged baselines are kept so they replay without an API key
 !eval_results/recordings/baseline_v1/
+!eval_results/recordings/chat_v0/
 .pytest_cache/
+!eval_results/recordings/chat_*/

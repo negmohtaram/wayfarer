@@ -137,7 +137,7 @@ def validate_no_day_overflow(
 def validate_daily_budget(
     itinerary: Itinerary, scenario: EvaluationScenario
 ) -> list[ValidationResult]:
-    ceiling = scenario.persona.budget_per_day * 1.2  # mirrors budget_critic threshold
+    ceiling = scenario.persona.hard.day_budget_ceiling
     results = []
     for day in itinerary.days:
         if day.total_cost > ceiling:
@@ -156,7 +156,7 @@ def validate_daily_budget(
 def validate_trip_budget(
     itinerary: Itinerary, scenario: EvaluationScenario
 ) -> list[ValidationResult]:
-    ceiling = scenario.persona.budget_per_day * scenario.persona.trip_days * 1.3
+    ceiling = scenario.persona.hard.trip_budget_ceiling
     if itinerary.total_cost > ceiling:
         return [_fail(
             "TRIP_BUDGET_RESPECTED",

@@ -40,3 +40,26 @@ def test_violation_carries_what_repair_needs():
                             observed=180.0, required=120.0, message="Day 2 over budget",
                             repair_hint="swap one paid stop for a free one")
     assert v.severity == "error" and v.day == 2
+
+
+def test_hard_view_is_read_only():
+    import pytest
+    from pydantic import ValidationError
+    hard = TravelerPersona(budget_per_day=100).hard
+    with pytest.raises(ValidationError):
+        hard.budget_per_day = 500
+
+
+def test_critic_and_validator_use_the_same_day_ceiling():
+    import asyncio
+    from src.agents.nodes.critics.budget import budget_critic
+    from src.evaluation.validators import validate_daily_budget
+    from src.models.itinerary import DayPlan, Itinerary
+    persona = TravelerPersona(budget_per_day=100, trip_days=1)
+    day = DayPlan(day_number=1, date="2026-10-19", experiences=[], total_cost=121.0)
+    itinerary = Itinerary(session_id="t", persona=persona, days=[day], destination="amsterdam", total_cost=121.0)
+    critic = asyncio.run(budget_critic(itinerary))
+    scenario = type("S", (), {"persona": persona})()
+    validator = validate_daily_budget(itinerary, scenario)
+    assert critic.affected_days == [1]
+    assert validator[0].passed is False

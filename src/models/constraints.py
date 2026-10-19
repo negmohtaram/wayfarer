@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, Union, get_args
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.models.experience import Experience
 
@@ -16,6 +16,8 @@ KNOWN_MOBILITY: tuple[str, ...] = get_args(Mobility)
 
 class HardConstraints(BaseModel):
     """Rules a valid plan must satisfy. A plan that breaks one is rejected, never traded for points."""
+
+    model_config = ConfigDict(frozen=True)
 
     destination: str
     trip_days: int
@@ -73,4 +75,4 @@ def split_mobility(values: list[str]) -> tuple[list[str], list[str]]:
 
 def wheelchair_ok(experience: Experience, persona: TravelerPersona) -> bool:
     """One wheelchair rule for the planner, the replanner and the validator."""
-    return "wheelchair" not in persona.physical_constraints or experience.physical_intensity == "low"
+    return "wheelchair" not in persona.hard.mobility or experience.physical_intensity == "low"

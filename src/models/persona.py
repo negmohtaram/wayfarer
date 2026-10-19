@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from src.models.constraints import HardConstraints, SoftPreferences, split_mobility
+
 
 class TravelerPersona(BaseModel):
     pace: float = Field(5.0, ge=0, le=10, description="0=rushed, 10=very slow")
@@ -20,6 +22,22 @@ class TravelerPersona(BaseModel):
     trip_days: int = Field(3, ge=1, le=14)
     destination: str = Field("amsterdam")
     trip_start_date: Optional[str] = Field(None, description="ISO date string YYYY-MM-DD")
+
+    @property
+    def hard(self) -> HardConstraints:
+        mobility, unknown = split_mobility(self.physical_constraints)
+        return HardConstraints(
+            destination=self.destination,
+            trip_days=self.trip_days,
+            budget_per_day=self.budget_per_day,
+            mobility=mobility,
+            unrecognised_mobility=unknown,
+            dietary=list(self.dietary_requirements),
+        )
+
+    @property
+    def soft(self) -> SoftPreferences:
+        return SoftPreferences(**self.model_dump(include=set(SoftPreferences.model_fields)))
 
     def persona_tags(self) -> list[str]:
         tags = []

@@ -7,11 +7,11 @@ async def budget_critic(itinerary: Itinerary) -> CritiqueResult:
     score = 10.0
     affected_days = []
 
-    persona = itinerary.persona
-    daily_budget = persona.budget_per_day
+    hard = itinerary.persona.hard
+    daily_budget = hard.budget_per_day
 
     for day in itinerary.days:
-        if day.total_cost > daily_budget * 1.2:
+        if day.total_cost > hard.day_budget_ceiling:
             over = day.total_cost - daily_budget
             issues.append(
                 f"Day {day.day_number}: Estimated cost €{day.total_cost:.0f} exceeds daily budget "
@@ -32,8 +32,8 @@ async def budget_critic(itinerary: Itinerary) -> CritiqueResult:
             score -= 0.3
 
     total = itinerary.total_cost
-    total_budget = daily_budget * persona.trip_days
-    if total > total_budget * 1.3:
+    total_budget = daily_budget * hard.trip_days
+    if total > hard.trip_budget_ceiling:
         issues.append(f"Total trip cost €{total:.0f} is significantly over total budget €{total_budget}")
         suggestions.append("Review the most expensive days and find budget alternatives")
         score -= 1.0

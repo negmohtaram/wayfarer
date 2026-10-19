@@ -5,8 +5,8 @@ The router needs the trip length, so the trip loads first. After routing, the ch
 other, so they run together.
 """
 import asyncio
-from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional
+from dataclasses import dataclass
+from typing import Awaitable, Callable, Optional
 
 from src.chat.router import Intent, Route
 
@@ -28,7 +28,6 @@ class TurnResult:
     change: Optional[dict] = None
     scope: Optional[dict] = None
     weather: Optional[dict] = None
-    steps: list[str] = field(default_factory=list)
 
 
 async def _place(steps: TurnSteps, route: Route, trip: dict) -> tuple[Optional[dict], Optional[dict]]:

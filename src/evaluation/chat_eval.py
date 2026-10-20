@@ -11,6 +11,7 @@ import time
 from collections import Counter
 from pathlib import Path
 
+from src.agents.llm import BATCH
 from src.chat.examples import ExampleBank, render_examples
 from src.chat.router import Intent, route_message
 from src.evaluation.chat_messages import CHAT_MESSAGES
@@ -36,7 +37,8 @@ async def run(messages: list, trip_days: int, pause: float, prompt: str = "v0",
     for n, (text, intent, day, tag) in enumerate(messages, 1):
         start = time.perf_counter()
         examples = render_examples(bank.retrieve(text)) if bank else None
-        route = await route_message(text, trip_days=trip_days, prompt=prompt, examples=examples)
+        route = await route_message(text, trip_days=trip_days, prompt=prompt, examples=examples,
+                                    policy=BATCH)
         ok_intent = route.intent.value == intent
         ok = ok_intent and route.day == day
         rows.append({"text": text, "intent": intent, "day": day, "tag": tag, "got_day_ref": route.day_ref,

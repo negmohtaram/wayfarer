@@ -3,6 +3,7 @@ import asyncio
 import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
+from src.agents.llm import LLMCallError
 from src.chat.router import Intent, Route, RouterError, parse_route, route_message
 
 
@@ -143,5 +144,6 @@ def test_other_provider_errors_still_raise():
         async def ainvoke(self, messages):
             raise ConnectionError("provider down")
 
-    with pytest.raises(ConnectionError):
+    with pytest.raises(LLMCallError) as err:
         asyncio.run(route_message("hi", trip_days=3, llm=Down()))
+    assert isinstance(err.value.__cause__, ConnectionError)

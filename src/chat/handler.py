@@ -60,3 +60,38 @@ async def handle_turn_sequential(text: str, session_id: str, steps: TurnSteps) -
     change = await _change(steps, text, route, trip)
     scope, weather = await _place(steps, route, trip)
     return TurnResult(route=route, change=change, scope=scope, weather=weather)
+
+
+class TurnRunner:
+    """Runs one chat turn at a time for one session.
+
+    A new message makes the turn still running stale: it is cancelled and awaited before the
+    new turn starts, so two turns never run at once. Only the newest turn's result is
+    delivered; the turn number guards against a step that finishes despite the cancel.
+    Nothing is written to the trip inside a turn, so a cancelled turn leaves nothing to undo.
+    """
+
+    def __init__(self, session_id: str, steps: TurnSteps,
+                 deliver: Callable[[str, TurnResult], Awaitable[None]]):
+        self.session_id = session_id
+        self.steps = steps
+        self.deliver = deliver
+        self._task: Optional[asyncio.Task] = None
+        self._latest = 0
+
+    async def submit(self, text: str) -> asyncio.Task:
+        if self._task is not None and not self._task.done():
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+        self._latest += 1
+        self._task = asyncio.create_task(self._run(text, self._latest))
+        return self._task
+
+    async def _run(self, text: str, turn: int) -> TurnResult:
+        result = await handle_turn(text, self.session_id, self.steps)
+        if turn == self._latest:
+            await self.deliver(text, result)
+        return result

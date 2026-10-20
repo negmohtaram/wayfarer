@@ -104,7 +104,7 @@ class Recorder:
         try:
             result = await live()
         except Exception as exc:
-            self.failures.append(f"{meta.get('site', 'call')}: {type(exc).__name__}")
+            self.failures.append(f"{meta.get('site', 'call')}: {describe(exc)}")
             exc.counted_by_recorder = True
             raise
         self.calls += 1
@@ -122,7 +122,17 @@ def note_fallback(site: str, exc: BaseException) -> None:
     """
     recorder = active()
     if recorder is not None and not getattr(exc, "counted_by_recorder", False):
-        recorder.failures.append(f"{site}: {type(exc).__name__}")
+        recorder.failures.append(f"{site}: {describe(exc)}")
+
+
+def describe(exc: BaseException) -> str:
+    """Name of the error that started it, plus kind and HTTP status for a failed model call,
+    so invalid runs can be split by cause (our request vs the provider vs the network)."""
+    kind = getattr(exc, "kind", None)
+    if kind is None:
+        return type(exc).__name__
+    root = type(exc.__cause__ or exc).__name__
+    return f"{root} ({kind}, status {getattr(exc, 'status', None)})"
 
 
 @contextlib.contextmanager

@@ -12,7 +12,7 @@ from typing import Any
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, Field, ValidationError
 
-from src.agents.llm import call_with_retry, get_llm
+from src.agents.llm import CHAT, RetryPolicy, call_with_retry, get_llm
 from src.config import GROQ_MODEL
 
 logger = logging.getLogger(__name__)
@@ -124,8 +124,10 @@ def _short(exc: ValidationError) -> str:
 
 
 async def route_message(text: str, trip_days: int, allowed: list[Intent] | None = None,
-                        llm: Any = None, prompt: str = "v1", examples: str | None = None) -> Route:
-    """examples: rendered labelled examples (see examples.py) added to the system prompt."""
+                        llm: Any = None, prompt: str = "v1", examples: str | None = None,
+                        policy: RetryPolicy = CHAT) -> Route:
+    """examples: rendered labelled examples (see examples.py) added to the system prompt.
+    policy: CHAT while a traveler waits; evaluation runs pass BATCH."""
     allowed = allowed or list(Intent)
     if Intent.NONE_OF_THESE not in allowed:
         allowed = allowed + [Intent.NONE_OF_THESE]
@@ -140,7 +142,7 @@ async def route_message(text: str, trip_days: int, allowed: list[Intent] | None 
 
     error = ""
     for attempt in range(2):
-        reply = await call_with_retry(partial(_invoke, model), messages, meta=meta)
+        reply = await call_with_retry(partial(_invoke, model), messages, policy=policy, meta=meta)
         try:
             return parse_route(reply, allowed, trip_days)
         except RouterError as exc:

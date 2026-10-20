@@ -1,7 +1,7 @@
 import asyncio
 import time
 
-from src.chat.handler import TurnSteps, handle_turn, handle_turn_sequential
+from src.chat.handler import TurnRunner, TurnSteps, handle_turn, handle_turn_sequential
 from src.chat.router import Intent, Route
 
 
@@ -56,3 +56,64 @@ def test_skips_steps_the_message_does_not_need():
     calls = []
     asyncio.run(handle_turn("nice", "s", make_steps(Route(intent=Intent.FEEDBACK), calls)))
     assert calls == ["load", "route"]
+
+
+def test_new_message_cancels_the_running_turn():
+    # Given: message A's change step waits forever; B's finishes at once.
+    route = Route(intent=Intent.CHANGE_SETTING, day=2)
+    steps = make_steps(route, [])
+    started, cancelled, extract_calls = asyncio.Event(), [], []
+    fast_extract = steps.extract
+
+    async def extract(text, r, trip):
+        extract_calls.append(text)
+        if text == "A":
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.append(text)
+                raise
+        return await fast_extract(text, r, trip)
+
+    async def route_step(text, trip_days):
+        return route
+
+    steps.extract, steps.route = extract, route_step    # two turns share one steps object
+    delivered = []
+
+    async def deliver(text, result):
+        delivered.append(text)
+
+    async def scenario():
+        runner = TurnRunner("s", steps, deliver)
+        a = await runner.submit("A")
+        await started.wait()
+        b = await runner.submit("B")     # When: B arrives while A is still running
+        await b
+        return a, b
+
+    a, b = asyncio.run(scenario())
+    # Then
+    assert a.cancelled() and cancelled == ["A"]     # A stopped, it did not keep running
+    assert delivered == ["B"]                       # A's result is never delivered
+    assert b.result().change == {"setting": "budget"}
+    assert extract_calls.count("A") == 1            # cancellation is never retried
+
+
+def test_a_stale_turn_that_finishes_anyway_is_not_delivered():
+    # A step that ignores the cancel and returns must still not reach the traveler.
+    route = Route(intent=Intent.CHANGE_SETTING, day=2)
+    steps = make_steps(route, [])
+    delivered = []
+
+    async def deliver(text, result):
+        delivered.append(text)
+
+    async def scenario():
+        runner = TurnRunner("s", steps, deliver)
+        runner._latest = 5                           # a newer message already arrived
+        await runner._run("old", 4)
+
+    asyncio.run(scenario())
+    assert delivered == []

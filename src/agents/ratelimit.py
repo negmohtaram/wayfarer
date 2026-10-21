@@ -50,6 +50,8 @@ class Limiter:
         self.requests = TokenBucket(max(1.0, rpm * burst_seconds / 60), rpm)
         self.tokens = TokenBucket(tpm * burst_seconds / 60, tpm)
         self._lock = asyncio.Lock()
+        self.admitted = 0           # attempts let through
+        self.drains = 0             # 429s seen
 
     async def acquire(self, tokens: float, max_wait: float = float("inf")) -> None:
         """Wait until one request and `tokens` tokens are free, then take both together.
@@ -66,6 +68,7 @@ class Limiter:
                 if wait <= 1e-9:
                     self.requests.level -= 1
                     self.tokens.level -= tokens
+                    self.admitted += 1
                     return
                 if _now() + wait > give_up:
                     raise NoCapacity(f"needs {wait:.1f}s, {max(0.0, give_up - _now()):.1f}s left")
@@ -80,16 +83,25 @@ class Limiter:
         """The provider said 429: our estimate of its budget was wrong, so assume none is left."""
         self.tokens.refill()
         self.tokens.level = min(self.tokens.level, 0.0)
+        self.drains += 1
 
 
 _limiters: dict[str, Limiter] = {}
 
 
+BURST_SECONDS = 10.0
+
+
 def limiter_for(model: str) -> Limiter:
-    """One shared limiter per model: every call site draws from the same quota."""
+    """One shared limiter per model: every call site draws from the same quota.
+
+    The provider counts a rolling minute. A full bucket plus a minute of refill would let
+    capacity + rate * 60 through in one window, so the rate is lowered until that fits the limit.
+    """
     if model not in _limiters:
         rpm, tpm = RATE_LIMITS.get(model, RATE_LIMITS["default"])
-        _limiters[model] = Limiter(rpm, tpm)
+        fit = 60 / (60 + BURST_SECONDS)
+        _limiters[model] = Limiter(rpm * fit, tpm * fit, BURST_SECONDS)
     return _limiters[model]
 
 

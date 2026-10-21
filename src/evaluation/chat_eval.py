@@ -3,6 +3,8 @@
 python -m src.evaluation.chat_eval --mode record   # live calls, saved
 python -m src.evaluation.chat_eval --mode resume   # after an interruption: reuse saved calls
 python -m src.evaluation.chat_eval                 # replay, no key needed
+python -m src.evaluation.chat_eval --mode record --concurrency 4 --name batch
+                                                   # a batch: several calls in flight, paced by the limiter
 """
 import argparse
 import asyncio
@@ -12,6 +14,8 @@ from collections import Counter
 from pathlib import Path
 
 from src.agents.llm import BATCH
+from src.agents.ratelimit import limiter_for
+from src.config import GROQ_MODEL
 from src.chat.examples import ExampleBank, render_examples
 from src.chat.router import Intent, route_message
 from src.evaluation.chat_messages import CHAT_MESSAGES
@@ -32,26 +36,41 @@ def condition(name: str, prompt: str, retrieval: bool) -> str:
 
 
 async def run(messages: list, trip_days: int, pause: float, prompt: str = "v0",
-              bank: ExampleBank | None = None) -> list[dict]:
+              bank: ExampleBank | None = None, concurrency: int = 1) -> list[dict]:
+    if concurrency > 1:
+        # A batch: up to `concurrency` messages in flight; the rate limiter paces the calls.
+        gate = asyncio.Semaphore(concurrency)
+
+        async def one(n, message):
+            async with gate:
+                return await route_one(n, message, trip_days, prompt, bank)
+
+        return list(await asyncio.gather(*(one(n, m) for n, m in enumerate(messages, 1))))
     rows = []
-    for n, (text, intent, day, tag) in enumerate(messages, 1):
+    for n, message in enumerate(messages, 1):
         start = time.perf_counter()
-        examples = render_examples(bank.retrieve(text)) if bank else None
-        route = await route_message(text, trip_days=trip_days, prompt=prompt, examples=examples,
-                                    policy=BATCH)
-        ok_intent = route.intent.value == intent
-        ok = ok_intent and route.day == day
-        rows.append({"text": text, "intent": intent, "day": day, "tag": tag, "got_day_ref": route.day_ref,
-                     "got_intent": route.intent.value, "got_day": route.day,
-                     "error": route.error, "ok_intent": ok_intent, "ok": ok})
-        mark = "✓" if ok else ("~" if ok_intent else "✗")
-        got = route.intent.value + (f" day={route.day}" if route.day else "")
-        want = intent + (f" day={day}" if day else "")
-        print(f"{n:3} {mark} {text[:48]:48} {want:22} → {got}"
-              + (f"  [{route.error}]" if route.error else ""), flush=True)
+        rows.append(await route_one(n, message, trip_days, prompt, bank))
         if pause and time.perf_counter() - start > 0.05:      # live call, not a replay
             await asyncio.sleep(pause)
     return rows
+
+
+async def route_one(n: int, message: tuple, trip_days: int, prompt: str,
+                    bank: ExampleBank | None) -> dict:
+    text, intent, day, tag = message
+    examples = render_examples(bank.retrieve(text)) if bank else None
+    route = await route_message(text, trip_days=trip_days, prompt=prompt, examples=examples,
+                                policy=BATCH)
+    ok_intent = route.intent.value == intent
+    ok = ok_intent and route.day == day
+    mark = "✓" if ok else ("~" if ok_intent else "✗")
+    got = route.intent.value + (f" day={route.day}" if route.day else "")
+    want = intent + (f" day={day}" if day else "")
+    print(f"{n:3} {mark} {text[:48]:48} {want:22} → {got}"
+          + (f"  [{route.error}]" if route.error else ""), flush=True)
+    return {"text": text, "intent": intent, "day": day, "tag": tag, "got_day_ref": route.day_ref,
+            "got_intent": route.intent.value, "got_day": route.day,
+            "error": route.error, "ok_intent": ok_intent, "ok": ok}
 
 
 def report(rows: list[dict]) -> dict:
@@ -100,18 +119,24 @@ def main() -> None:
     parser.add_argument("--prompt", choices=["v0", "v1"], default="v0")
     parser.add_argument("--retrieval", action="store_true", help="add similar labelled examples")
     parser.add_argument("--pause", type=float, default=3.0, help="seconds between live calls")
+    parser.add_argument("--concurrency", type=int, default=1,
+                        help="messages in flight at once; above 1 the rate limiter alone paces calls")
+    parser.add_argument("--name", default="", help="suffix for a separate recording folder and report")
     args = parser.parse_args()
     if args.set == "amsterdam" and args.retrieval:
         raise SystemExit("the Amsterdam set is the example bank: testing on it would leak")
     messages, trip_days = SETS[args.set]
-    name = condition(args.set, args.prompt, args.retrieval)
+    name = condition(args.set, args.prompt, args.retrieval) + (f"_{args.name}" if args.name else "")
     folder = Path(f"eval_results/recordings/chat_{name}")
     out_path = Path("eval_results/chat_router_report.json" if name == "v0"
                     else f"eval_results/chat_router_{name}.json")
     bank = ExampleBank() if args.retrieval or args.set != "amsterdam" else None
     with recording(args.mode, folder) as rec:
-        rows = asyncio.run(run(messages, trip_days, args.pause if args.mode != "replay" else 0,
-                               args.prompt, bank if args.retrieval else None))
+        started = time.perf_counter()
+        pause = args.pause if args.mode != "replay" and args.concurrency == 1 else 0
+        rows = asyncio.run(run(messages, trip_days, pause, args.prompt,
+                               bank if args.retrieval else None, args.concurrency))
+        minutes = (time.perf_counter() - started) / 60
     if bank:
         for row in rows:
             row["closest_in_bank"] = round(bank.closest(row["text"])[0], 3)
@@ -120,10 +145,15 @@ def main() -> None:
         print(f"Near copies of a bank message (similarity >= {NEAR_COPY}): {len(near)}; "
               f"intent correct without them: {sum(r['ok_intent'] for r in rest)}/{len(rest)}")
     out = report(rows)
-    out.update(condition=name, live_calls=rec.calls, replayed=rec.replayed, failed_calls=len(rec.failures))
+    limiter = limiter_for(GROQ_MODEL)
+    out.update(condition=name, live_calls=rec.calls, replayed=rec.replayed, failed_calls=len(rec.failures),
+               concurrency=args.concurrency, minutes=round(minutes, 2),
+               live_calls_per_minute=round(rec.calls / minutes, 1) if rec.calls else None,
+               attempts_admitted=limiter.admitted, rate_limited_429=limiter.drains)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out, indent=2, default=str))
-    print(f"live calls {rec.calls} · replayed {rec.replayed} · failed {len(rec.failures)} · saved {out_path}")
+    print(f"live calls {rec.calls} · replayed {rec.replayed} · failed {len(rec.failures)} · "
+          f"{minutes:.1f} min · attempts {limiter.admitted} · 429s {limiter.drains} · saved {out_path}")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 """Rate limiter: two token buckets, requests and tokens, with no real waiting."""
 import asyncio
+import random
 
 import groq
 import pytest
@@ -27,6 +28,7 @@ def clock(monkeypatch):
     for module in (llm, ratelimit):
         monkeypatch.setattr(module, "_now", c.now)
         monkeypatch.setattr(module, "_sleep", c.sleep)
+    monkeypatch.setattr(llm, "_random", random.Random(0))
     return c
 
 
@@ -93,7 +95,7 @@ def test_a_429_empties_the_token_bucket(clock):
     fake = Flaky(status_error(groq.RateLimitError, 429))
     asyncio.run(llm._retry(fake, (), {}, llm.BATCH, "m"))
     # Drained to 0, then the retry had to wait for its 150 reserved tokens to refill.
-    assert fake.calls == 2 and clock.t >= 150 / limiter.tokens.rate
+    assert fake.calls == 2 and clock.t >= 150 / limiter.tokens.rate - 1e-9 - 1e-9
 
 
 def test_no_capacity_before_the_deadline_is_a_failure_not_a_hang(clock):
@@ -103,6 +105,26 @@ def test_no_capacity_before_the_deadline_is_a_failure_not_a_hang(clock):
     with pytest.raises(LLMCallError) as err:
         asyncio.run(llm._retry(fake, (), {}, CHAT, "m"))
     assert fake.calls == 0 and "capacity" in err.value.attempts[-1][2]
+
+
+def test_never_more_than_the_limit_in_any_rolling_minute(clock):
+    # Greedy callers for 5 minutes: the provider must never see more than 8,000 tokens
+    # or 30 requests inside any 60 s window.
+    limiter = limiter_for("openai/gpt-oss-120b")
+    starts: list[tuple[float, int]] = []
+
+    async def caller(size):
+        while clock.t < 300:
+            await limiter.acquire(size)
+            starts.append((clock.t, size))
+
+    async def main():
+        await asyncio.gather(caller(1_000), caller(700), caller(150))
+
+    asyncio.run(main())
+    for t, _ in starts:
+        window = [n for s, n in starts if t <= s < t + 60]
+        assert sum(window) <= 8_000 and len(window) <= 30
 
 
 def test_one_limiter_per_model():

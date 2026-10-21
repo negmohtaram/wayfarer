@@ -9,7 +9,7 @@ import groq
 import httpx
 import pytest
 
-from src.agents import llm
+from src.agents import llm, ratelimit
 from src.agents.llm import BATCH, CHAT, PERMANENT, TRANSIENT, LLMCallError, RetryPolicy, call_with_retry
 
 
@@ -37,6 +37,8 @@ def clock(monkeypatch):
     c = Clock()
     monkeypatch.setattr(llm, "_now", c.now)
     monkeypatch.setattr(llm, "_sleep", c.sleep)
+    monkeypatch.setattr(ratelimit, "_now", c.now)
+    monkeypatch.setattr(ratelimit, "_sleep", c.sleep)
     monkeypatch.setattr(llm, "_random", random.Random(0))
     return c
 

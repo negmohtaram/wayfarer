@@ -59,3 +59,19 @@ Hard constraints taken from the traveler's own words go through an LLM. A misrea
 1. Wheelchair access is not represented. The planner filters on `physical_intensity == "low"`, and a low-intensity museum can still have stairs. The plan is a `wheelchair_accessible` field that can be true, false or unknown, with unknown excluded for wheelchair users and the source of each value kept.
 2. There are no opening hours, so a stop can be scheduled when it is closed.
 3. Traveler-specific scores are written onto catalogue objects. The plan is to keep places unchanged and score them in a separate object with a breakdown of each term.
+
+## How constraints are enforced
+
+Hard constraints filter. Soft preferences rank. A stop or a plan that breaks a hard constraint is rejected with a reason and is never traded for preference points.
+
+| Constraint | Checked on | Where | When it fails |
+|---|---|---|---|
+| Wheelchair access | one stop | `check_experience`, before scoring | stop removed, `ACCESSIBILITY` kept in `state["rejected"]` |
+| One stop over the day ceiling | one stop | `check_experience`, before scoring | stop removed, `OVER_DAY_BUDGET` kept |
+| Day over the ceiling | a planned day | budget critic | `DAILY_BUDGET` violation, never approved, revision removes the most expensive stop |
+| Trip over the ceiling | the whole plan | budget critic | `TRIP_BUDGET` violation |
+| Still broken after revisions | the whole plan | highlight ranker | `status = "infeasible"` with the violations, not `"complete"` |
+
+A rule that depends on one stop alone can run before planning. A rule on a sum, like the day's cost, can only be judged after the planner has chosen the stops together.
+
+The ceilings live in one place, `HardConstraints`: the daily budget times 1.2 for a day and times 1.3 for the whole trip.

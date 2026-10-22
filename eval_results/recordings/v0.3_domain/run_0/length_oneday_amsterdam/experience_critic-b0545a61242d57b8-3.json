@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 1-day itinerary for Amsterdam.\n\nTraveler: solo, pace 4.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (The Full Day): Jewish Historical Museum and Portuguese Synagogue, Rijksmuseum at opening hour, NEMO Science Museum rooftop terrace, Westerkerk tower sunset, Sunset canal bike ride\n  Types: cultural, cultural, scenic, scenic, active | Avg local score: 5.6 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Packed schedule for a traveler who prefers a slow pace (5 major stops in one day).",
+        "No dedicated food break despite moderate interest in food.",
+        "Cultural stops (Jewish Historical Museum, Rijksmuseum) are back\u2011to\u2011back, reducing narrative flow.",
+        "Theme is fragmented \u2013 Jewish heritage, Dutch art, science, architecture, then active bike ride, lacking a unifying story.",
+        "Two of the five activities are major tourist magnets (Rijksmuseum, NEMO) which may feel less local for a traveler with a 5/10 local preference."
+      ],
+      "suggestions": [
+        "Insert a lunch break at a local caf\u00e9 in the Jordaan district to satisfy the food interest and provide a slower rhythm.",
+        "Combine the Jewish Historical Museum visit with a short walking tour of the historic Jewish Quarter, adding a local\u2011flavor narrative thread.",
+        "Swap the NEMO rooftop terrace for a brief stop at the nearby Het Twiske park or a local market to increase the local feel and give a breather.",
+        "Reorder the day: start with the Jewish Quarter walk, then the museum, followed by lunch, then Rijksmuseum (still at opening hour), then Westerkerk tower for sunset, and finish with the canal bike ride \u2013 creating a smoother emotional build\u2011up.",
+        "Consider adding a short coffee/tea pause at a canal\u2011side caf\u00e9 after the tower to transition gently into the active bike ride."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1
+      ]
+    }
+  }
+}

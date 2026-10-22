@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "site": "disruption_analyzer",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "DisruptionAnalysis"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a travel replanner. Classify the traveler's disruption and identify which scheduled experiences are affected."
+    },
+    {
+      "role": "human",
+      "content": "Traveler reported: \"It's raining heavily today and the weather looks terrible. We need to change our plans.\"\n\nRemaining schedule:\nDay 2: Trpenmuseum (Tropics Museum), NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\nDay 3: Van Gogh Museum first entry, Rijksmuseum at opening hour, Canal cruise with local operator Wetlands Safari, Indonesian rijsttafel dinner"
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.agents.replan_graph:DisruptionAnalysis",
+    "data": {
+      "disruption_type": "weather",
+      "affected_experiences": [
+        "Sunset canal bike ride",
+        "Westerkerk tower sunset",
+        "Canal cruise with local operator Wetlands Safari",
+        "NEMO Science Museum rooftop terrace"
+      ],
+      "recommendation": "Consider indoor alternatives such as visiting the Trpenmuseum, Van Gogh Museum, Rijksmuseum, or exploring indoor exhibits at NEMO. You could also enjoy a cozy Indonesian rijsttafel dinner or a museum caf\u00e9."
+    }
+  }
+}

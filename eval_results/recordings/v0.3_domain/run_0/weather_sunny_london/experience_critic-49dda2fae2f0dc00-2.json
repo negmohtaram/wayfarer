@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for London.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Tate Modern Turbine Hall and Level 10 viewing gallery, Borough Market on a weekday morning, Padella pasta on Borough High Street, pre-5pm, Bermondsey Beer Mile on a Saturday\n  Types: cultural, food, food, food | Avg local score: 6.0 | Avg fit score: 0.80\nDay 2 (Peak Day): Primrose Hill at sunrise for the London panorama, Portobello Road Market on a Saturday morning, Regent's Canal towpath from Little Venice to Broadway Market, Shoreditch street art walk, Rivington Street to Brick Lane\n  Types: scenic, serendipity, active, serendipity | Avg local score: 6.8 | Avg fit score: 0.81\nDay 3 (The Farewell Day): Broadway Market Saturday and London Fields lido, Hackney Wick canal walk and Crate Brewery, Greenwich Park Observatory at golden hour, Dennis Severs' House candlelit evening, Spitalfields\n  Types: serendipity, active, scenic, cultural | Avg local score: 7.4 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2 jumps between widely separated neighborhoods (Primrose Hill, Notting Hill, Little Venice, Shoreditch) causing excessive travel and weakening narrative coherence.",
+        "Day 3 packs five distinct activities across East London, which is too dense for a moderate\u2011pace traveler and risks fatigue before the final evening.",
+        "Overall pacing leans toward high activity on Days 2\u20113 despite the traveler\u2019s mid\u2011range pace preference (5/10)."
+      ],
+      "suggestions": [
+        "Consolidate Day 2 around a single quadrant (e.g., focus on North\u2011West: Primrose Hill, Portobello Road, and Little Venice) and drop the Shoreditch street\u2011art walk or move it to Day 3.",
+        "Trim Day 3 to three key experiences: Greenwich Park & Observatory at golden hour, a relaxed Hackney Wick canal walk with a single brewery stop, and the candlelit Dennis Severs' House as the memorable close.",
+        "Add a short, low\u2011key food break on Day 2 (e.g., a caf\u00e9 in Notting Hill) to balance the cultural/scenic focus and better match the traveler\u2019s food interest."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

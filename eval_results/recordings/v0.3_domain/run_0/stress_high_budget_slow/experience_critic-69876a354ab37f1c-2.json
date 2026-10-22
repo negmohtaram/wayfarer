@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 1-day itinerary for Amsterdam.\n\nTraveler: solo, pace 9.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (The Full Day): Floating flower market on Singel canal, Canal cruise with local operator Wetlands Safari, Begijnhof hidden courtyard\n  Types: serendipity, scenic, serendipity | Avg local score: 6.3 | Avg fit score: 0.83\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 4.6,
+      "issues": [
+        "Variety is narrow \u2013 two serendipity stops and one scenic activity make the day feel repetitive.",
+        "Emotional arc never builds to a clear peak; the most exciting element (the canal cruise) is placed in the middle and the day ends on a low\u2011key courtyard.",
+        "Narrative coherence is weak \u2013 the floating flower market and canal cruise belong to different themes, leaving the day without a unifying story.",
+        "Ending at Begijnhof, while charming, lacks a memorable climax or \u2018wow\u2019 moment for a full\u2011day itinerary.",
+        "Persona fit is low (fit score 0.83): no food experiences for a traveler with a neutral food interest, limited cultural depth for a culture score of 5, and the local\u2011preference weighting is higher than the traveler\u2019s desire."
+      ],
+      "suggestions": [
+        "Introduce a brief local food stop \u2013 e.g., a coffee and stroopwafel at a historic caf\u00e9 near the market \u2013 to address the food dimension.",
+        "Swap the order to create a crescendo: start with the floating flower market (serendipity), then explore the Begijnhof (cultural depth), and finish with a sunset canal cruise (scenic climax).",
+        "Add a short cultural touchpoint, such as a quick visit to the Rijksmuseum\u2019s highlights or the Anne Frank House lobby (if time permits), to raise the cultural relevance.",
+        "Consider a reflective pause after the cruise at a canal\u2011side bar or park, giving the solo traveler a moment to unwind before ending the day.",
+        "If the traveler truly prefers a very slow pace, build in longer dwell times (e.g., 45\u201160\u202fmin) at each spot and limit travel between locations."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1
+      ]
+    }
+  }
+}

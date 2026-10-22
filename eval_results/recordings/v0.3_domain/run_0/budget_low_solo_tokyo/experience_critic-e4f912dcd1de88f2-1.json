@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Tokyo.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Meiji Shrine morning visit, Shimokitazawa vintage record and clothes shopping, Koenji shotengai and underground music, Shibuya Crossing at night\n  Types: cultural, serendipity, serendipity, scenic | Avg local score: 7.0 | Avg fit score: 0.77\nDay 2 (Peak Day): Mount Takao sunrise hike, Tsukiji outer market breakfast, Depachika (department store basement food hall), Izakaya evening in Yurakucho under the tracks\n  Types: active, food, food, food | Avg local score: 7.5 | Avg fit score: 0.80\nDay 3 (The Farewell Day): Senso-ji Temple at 6am, Nezu Shrine torii gates in morning mist, Hamarikyu Gardens tea ceremony, Sumida River evening boat\n  Types: cultural, scenic, cultural, scenic | Avg local score: 6.5 | Avg fit score: 0.78\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.0,
+      "issues": [
+        "Day 2 packs four major activities (sunrise hike, market breakfast, department\u2011store food hall, izakaya) which may feel rushed for a traveler who prefers a moderate pace (5/10).",
+        "Overall local immersion scores (6.5\u20117.5) exceed the traveler's self\u2011reported local preference (5/10), potentially reducing authenticity feeling."
+      ],
+      "suggestions": [
+        "Day 2: Consider dropping either the department\u2011store depachika or the izakaya evening, or shift one activity to late afternoon on Day 1 to balance workload.",
+        "Introduce a low\u2011key local experience (e.g., a neighborhood caf\u00e9 or a short park walk) on Day 1 or Day 3 to temper the high local intensity and align with the 5/10 local preference."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        2
+      ],
+      "violations": []
+    }
+  }
+}

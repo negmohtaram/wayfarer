@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Floating flower market on Singel canal, Foam Photography Museum, Begijnhof hidden courtyard\n  Types: serendipity, cultural, serendipity | Avg local score: 6.3 | Avg fit score: 0.80\nDay 2 (Peak Day): NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\n  Types: scenic, active, scenic | Avg local score: 6.3 | Avg fit score: 0.81\nDay 3 (The Farewell Day): Anne Frank House, Albert Cuyp Market lunch\n  Types: cultural, food | Avg local score: 6.0 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.5,
+      "issues": [
+        "Day 2 packs two high\u2011energy activities (rooftop terrace and a sunset bike ride) which may exceed the traveler's preferred pace of 5/10 (moderately relaxed).",
+        "The itinerary leans slightly more toward \u2018local\u2019 (average local scores 6.0\u20116.3) than the traveler\u2019s stated preference (5/10), especially on Day 1 and Day 2."
+      ],
+      "suggestions": [
+        "Swap the sunset canal bike ride on Day 2 for a leisurely sunset canal cruise or a guided walking tour to keep the activity level moderate.",
+        "Add a short, authentic Dutch snack stop (e.g., stroopwafel from a local shop) on Day 1 to balance the local intensity and give a tasty cultural touch.",
+        "Consider a brief coffee break at a neighborhood caf\u00e9 on Day 3 after the Anne Frank House to soften the transition to departure."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        2
+      ],
+      "violations": []
+    }
+  }
+}

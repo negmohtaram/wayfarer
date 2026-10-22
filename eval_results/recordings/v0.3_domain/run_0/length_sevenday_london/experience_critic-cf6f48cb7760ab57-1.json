@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 7-day itinerary for London.\n\nTraveler: solo, pace 6.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Tate Modern Turbine Hall and Level 10 viewing gallery, Leake Street Arches (the Banksy Tunnel) at dusk\n  Types: cultural, serendipity | Avg local score: 5.0 | Avg fit score: 0.80\nDay 2 (Deep Dive Day): Greenwich Park Observatory at golden hour, Frank's Cafe rooftop, Peckham, summer evening\n  Types: scenic, nightlife | Avg local score: 6.5 | Avg fit score: 0.80\nDay 3 (Discovery Day): Portobello Road Market on a Saturday morning, Regent's Canal towpath from Little Venice to Broadway Market\n  Types: serendipity, active | Avg local score: 6.8 | Avg fit score: 0.83\nDay 4 (Peak Day): Broadway Market Saturday and London Fields lido, Hackney Wick canal walk and Crate Brewery\n  Types: serendipity, active | Avg local score: 8.5 | Avg fit score: 0.81\nDay 5 (Reflection Day): Peckham Rye Park early morning and Rye Lane market, Bermondsey Beer Mile on a Saturday\n  Types: passive, food | Avg local score: 8.8 | Avg fit score: 0.75\nDay 6 (Reflection Day): Primrose Hill at sunrise for the London panorama, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday\n  Types: scenic, cultural | Avg local score: 4.5 | Avg fit score: 0.79\nDay 7 (The Farewell Day): Millennium Bridge walk at dawn, St Paul's to Tate, Columbia Road Flower Market at 8am Sunday, Maltby Street Market Saturday morning under the arches, Borough Market on a weekday morning, Shoreditch street art walk, Rivington Street to Brick Lane, Padella pasta on Borough High Street, pre-5pm, Traditional pub Sunday roast, a proper local, Dennis Severs' House candlelit evening, Spitalfields\n  Types: scenic, serendipity, food, food, serendipity, food, food, cultural | Avg local score: 6.8 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2\u2019s nightlife focus (Frank's Cafe rooftop, Peckham) may be too intense for a solo traveler with a moderate pace (6/10) and modest interest in nightlife.",
+        "Day 5 clusters food and market activities, but the traveler\u2019s food interest is only average (5/10); the day feels food\u2011heavy and lacks cultural balance.",
+        "Day 6 has a low local score (4.5) and a single cultural site, making it feel under\u2011stimulating after the high\u2011energy peak of Day 4.",
+        "Day 7 is overpacked with eight distinct stops spanning Saturday and Sunday, creating logistical confusion and risking fatigue on the farewell day."
+      ],
+      "suggestions": [
+        "Replace the rooftop bar on Day 2 with a quieter riverside caf\u00e9 or a low\u2011key gallery to keep the evening relaxed.",
+        "Swap one of the food\u2011centric stops on Day 5 (e.g., Bermondsey Beer Mile) for a short cultural visit such as the Geffrye Museum or a local history walk.",
+        "Add a second, low\u2011effort cultural or scenic activity on Day 6 (e.g., a quick walk through Bloomsbury\u2019s literary squares) to raise engagement and balance the day.",
+        "Trim Day 7 to a coherent half\u2011day: keep the Millennium Bridge walk, Columbia Road Flower Market, and a single memorable meal (e.g., Padella). Drop the Saturday\u2011only markets or shift them to earlier days, and end with a relaxed evening at Dennis Severs\u2019 House."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        5,
+        6,
+        7
+      ]
+    }
+  }
+}

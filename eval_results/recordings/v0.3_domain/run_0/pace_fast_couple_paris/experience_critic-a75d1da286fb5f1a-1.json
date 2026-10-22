@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Paris.\n\nTraveler: couple, pace 2.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Louvre at 9am Wednesday/Friday, Palais Royal gardens morning coffee, Mus\u00e9e d'Orsay impressionist galleries, Falafel in the Jewish Quarter (Le Marais), Centre Pompidou and Stravinsky Fountain\n  Types: cultural, passive, cultural, food, cultural | Avg local score: 5.4 | Avg fit score: 0.80\nDay 2 (Peak Day): P\u00e8re Lachaise Cemetery contemplative walk, Canal Saint-Martin morning walk, Belleville street art and view, \u00cele Saint-Louis evening walk and Berthillon ice cream, Natural wine bar evening in the 11th\n  Types: passive, serendipity, serendipity, serendipity, food | Avg local score: 8.3 | Avg fit score: 0.77\nDay 3 (The Farewell Day): Eiffel Tower at dawn (before crowds), Montmartre pre-dawn walk to Sacr\u00e9-C\u0153ur, Saint-Germain literary cafe morning, March\u00e9 d'Aligre morning market, Luxembourg Gardens afternoon\n  Types: scenic, scenic, food, food, passive | Avg local score: 5.9 | Avg fit score: 0.83\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Day 1 packs three major museums (Louvre, Orsay, Pompidou) which exceeds the couple's very slow pace (2/10) and leaves little time for rest.",
+        "Day 2, while locally rich, still strings together five distinct activities (cemetery walk, canal stroll, street art, ice\u2011cream walk, wine bar) without built\u2011in downtime, risking fatigue.",
+        "The emotional arc starts too high with intensive museum visits, then drops into a long day of walking before a relatively relaxed final day, which may feel uneven for a slow\u2011paced couple.",
+        "Persona fit scores are low (0.80\u20110.77) indicating mismatched activity intensity versus traveler preferences."
+      ],
+      "suggestions": [
+        "Swap one of the Day 1 museums (e.g., Pompidou) for a leisurely activity like a Seine riverbank picnic or a visit to the nearby Tuileries Garden.",
+        "Condense Day 2 by selecting two highlight experiences (e.g., Canal Saint\u2011Martin walk and \u00cele Saint\u2011Louis ice\u2011cream) and moving the others (P\u00e8re Lachaise, Belleville street art, natural wine bar) to either Day 1 evening or Day 3 afternoon.",
+        "Insert explicit rest periods: a mid\u2011morning coffee break after the Louvre and a late\u2011afternoon pause in Luxembourg Gardens on Day 3.",
+        "Consider a gentle sunrise visit to the Eiffel Tower on Day 3 as the climax, then end with a relaxed dinner cruise on the Seine to create a memorable farewell."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2
+      ]
+    }
+  }
+}

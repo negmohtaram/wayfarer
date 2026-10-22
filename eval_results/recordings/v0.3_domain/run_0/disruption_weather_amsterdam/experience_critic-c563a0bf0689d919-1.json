@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Floating flower market on Singel canal, Foam Photography Museum, Begijnhof hidden courtyard\n  Types: cultural, serendipity, cultural, serendipity | Avg local score: 6.0 | Avg fit score: 0.81\nDay 2 (Peak Day): Trpenmuseum (Tropics Museum), NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\n  Types: cultural, scenic, active, scenic | Avg local score: 6.2 | Avg fit score: 0.81\nDay 3 (The Farewell Day): Van Gogh Museum first entry, Rijksmuseum at opening hour, Canal cruise with local operator Wetlands Safari, Indonesian rijsttafel dinner\n  Types: cultural, cultural, scenic, food | Avg local score: 5.2 | Avg fit score: 0.80\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 1 leans heavily on cultural institutions; the serendipity stops feel brief and don't provide deep local immersion.",
+        "Day 3 is museum\u2011heavy (Van Gogh + Rijksmuseum) leaving little room for a distinctive climax beyond the cruise.",
+        "Overall itinerary has a high museum-to\u2011local activity ratio; average local scores (5\u20116) indicate missed opportunities for authentic neighborhood experiences.",
+        "The emotional peak on Day 2 is strong, but the descent on Day 3 feels a bit flat compared to the bike\u2011ride sunset climax."
+      ],
+      "suggestions": [
+        "Swap one museum on Day 1 (e.g., Foam Photography) for a walk through the Jordaan district with a stop at a local caf\u00e9 or a hidden courtyard tour.",
+        "Add a short local market visit (e.g., Albert Cuyp or Noordermarkt) on Day 3 before the Rijksmuseum to boost local flavor.",
+        "Replace the Rijksmuseum opening\u2011hour slot with a unique experience such as a night\u2011time canal lantern tour or a live music venue in De Pijp to raise the ending intensity.",
+        "Incorporate a brief bike\u2011share ride through the Eastern Docklands on Day 1 to introduce an active element early and balance the pace."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        3
+      ]
+    }
+  }
+}

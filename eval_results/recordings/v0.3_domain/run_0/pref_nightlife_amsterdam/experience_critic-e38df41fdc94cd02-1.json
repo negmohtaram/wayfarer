@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 2-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Rijksmuseum at opening hour, Foam Photography Museum, Begijnhof hidden courtyard\n  Types: cultural, cultural, cultural, serendipity | Avg local score: 5.8 | Avg fit score: 0.81\nDay 2 (The Farewell Day): Anne Frank House, NEMO Science Museum rooftop terrace, Sunset canal bike ride, Westerkerk tower sunset\n  Types: cultural, scenic, active, scenic | Avg local score: 5.8 | Avg fit score: 0.81\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.8,
+      "issues": [
+        "Day 1 is culturally dense but lacks activity and food experiences, making it feel repetitive.",
+        "Overall itinerary provides few truly local experiences (only Begijnhof), which is below the traveler's local preference score of 5.",
+        "No dedicated culinary stop, despite the traveler\u2019s moderate interest in food."
+      ],
+      "suggestions": [
+        "Swap one of the Day\u202f1 museums (e.g., Foam Photography) for a short bike ride through the Jordaan district or a walk in Vondelpark to add active variety.",
+        "Insert a lunch at a local market such as Albert Cuyp or a traditional Dutch caf\u00e9 to satisfy the food interest and boost local immersion.",
+        "Add a brief canal cruise or a visit to a historic coffee shop on Day\u202f1 to deepen the local feel.",
+        "Consider ending Day\u202f1 with a relaxed drink in a hidden courtyard (e.g., De 9 Straatjes) to create a softer close before the more intense Day\u202f2."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1
+      ]
+    }
+  }
+}

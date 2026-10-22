@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Paris.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 6.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Falafel in the Jewish Quarter (Le Marais), Centre Pompidou and Stravinsky Fountain, Luxembourg Gardens afternoon, \u00cele Saint-Louis evening walk and Berthillon ice cream\n  Types: food, cultural, passive, serendipity | Avg local score: 6.2 | Avg fit score: 0.84\nDay 2 (Peak Day): Eiffel Tower at dawn (before crowds), Mus\u00e9e d'Orsay impressionist galleries, Canal Saint-Martin morning walk, Natural wine bar evening in the 11th\n  Types: scenic, cultural, serendipity, food | Avg local score: 6.1 | Avg fit score: 0.80\nDay 3 (The Farewell Day): Montmartre pre-dawn walk to Sacr\u00e9-C\u0153ur, P\u00e8re Lachaise Cemetery contemplative walk, March\u00e9 d'Aligre morning market, Belleville street art and view\n  Types: scenic, passive, food, serendipity | Avg local score: 8.1 | Avg fit score: 0.83\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.4,
+      "issues": [
+        "Day 3 ends with a mix of activities (pre\u2011dawn Montmartre walk, cemetery, market, street art) that feels scattered and lacks a strong, memorable climax.",
+        "The pre\u2011dawn walk to Sacr\u00e9\u2011C\u0153ur may be too early for a solo traveler and offers limited atmosphere at that hour.",
+        "P\u00e8re Lachaise, while interesting, is a somber site that can lower the emotional momentum after the peak of Day 2."
+      ],
+      "suggestions": [
+        "Replace the pre\u2011dawn Montmartre walk with a mid\u2011morning stroll that includes the iconic view from the steps of Sacr\u00e9\u2011C\u0153ur, allowing time for coffee at a local caf\u00e9.",
+        "Swap the P\u00e8re Lachaise visit for a more uplifting experience, such as a sunset at Parc des Buttes\u2011Chaumont or a rooftop bar in Belleville with city views.",
+        "Conclude Day 3 with a farewell dinner at a classic Parisian bistro (e.g., Le Coupe Chou) or a river\u2011side restaurant on the Seine to give a memorable culinary closure.",
+        "If keeping the market, schedule it earlier and pair it with a tasting session at a nearby wine shop to reinforce the local food preference."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        3
+      ]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "site": "disruption_analyzer",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "DisruptionAnalysis"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a travel replanner. Classify the traveler's disruption and identify which scheduled experiences are affected."
+    },
+    {
+      "role": "human",
+      "content": "Traveler reported: \"We're completely exhausted from yesterday. We need a much slower day with easier activities.\"\n\nRemaining schedule:\nDay 2: Mount Takao sunrise hike, Tsukiji outer market breakfast, Depachika (department store basement food hall), Izakaya evening in Yurakucho under the tracks\nDay 3: Senso-ji Temple at 6am, Nezu Shrine torii gates in morning mist, Hamarikyu Gardens tea ceremony, Sumida River evening boat"
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.agents.replan_graph:DisruptionAnalysis",
+    "data": {
+      "disruption_type": "tired",
+      "affected_experiences": [
+        "Mount Takao sunrise hike",
+        "Senso-ji Temple at 6am",
+        "Nezu Shrine torii gates in morning mist"
+      ],
+      "recommendation": "Replace the early-morning, physically demanding activities with more relaxed options. For Day 2, skip the Mount Takao sunrise hike and enjoy a leisurely breakfast at Tsukiji followed by a gentle stroll through the nearby Hamarikyu Gardens or a riverbank park before the evening izakaya. For Day 3, move the Senso-ji and Nezu Shrine visits to a later, more relaxed time (mid\u2011morning) or swap them for a calm tea ceremony at a traditional tea house and a visit to a museum or art gallery. Keep the evening Sumida River boat ride as it\u2019s low\u2011effort and scenic."
+    }
+  }
+}

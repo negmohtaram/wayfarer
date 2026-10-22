@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 2.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Floating flower market on Singel canal, Foam Photography Museum, Begijnhof hidden courtyard, Indonesian rijsttafel dinner\n  Types: cultural, serendipity, cultural, serendipity, food | Avg local score: 6.2 | Avg fit score: 0.74\nDay 2 (Peak Day): Van Gogh Museum first entry, Rijksmuseum at opening hour, Stedelijk Museum contemporary art, Vondelpark sunset picnic, Sunset canal bike ride\n  Types: cultural, cultural, cultural, passive, active | Avg local score: 5.8 | Avg fit score: 0.74\nDay 3 (The Farewell Day): Anne Frank House, NEMO Science Museum rooftop terrace, Canal cruise with local operator Wetlands Safari, Trpenmuseum (Tropics Museum), Westerkerk tower sunset\n  Types: cultural, scenic, scenic, cultural, scenic | Avg local score: 5.6 | Avg fit score: 0.75\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 2 packs three major museums back\u2011to\u2011back, creating a high\u2011intensity block that conflicts with the traveler\u2019s very slow pace (2/10).",
+        "Limited downtime on Day 2; only a brief picnic and bike ride follow intensive museum visits, risking fatigue.",
+        "The Wetlands Safari canal cruise on Day 3 leans toward a tourist\u2011y experience rather than a truly local one, lowering the local\u2011preference fit."
+      ],
+      "suggestions": [
+        "Swap one of the Day 2 museums (e.g., Stedelijk) for a relaxed activity such as a guided walking tour of the Jordaan neighbourhood or a coffee break at a historic caf\u00e9.",
+        "Insert a short rest period after the Rijksmuseum (e.g., a sit\u2011down at Vondelpark before the picnic) to respect the slow\u2011pace preference.",
+        "Replace the Wetlands Safari cruise with a traditional canal cruise operated by a local family\u2011run company, or a self\u2011guided rowing experience for a more authentic feel.",
+        "Consider adding a light cultural touch to Day 3, like a visit to a local cheese shop or a brief stop at a street market, to boost the local score without adding intensity."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2
+      ]
+    }
+  }
+}

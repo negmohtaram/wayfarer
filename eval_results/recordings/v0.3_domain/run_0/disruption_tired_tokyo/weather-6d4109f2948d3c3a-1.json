@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "site": "weather",
+    "city": "tokyo",
+    "start_date": "2026-09-11",
+    "days": 2
+  },
+  "messages": null,
+  "result": {
+    "kind": "json",
+    "data": [
+      {
+        "date": "2026-09-11",
+        "condition": "rainy",
+        "temp_high": 20.0,
+        "temp_low": 18.6,
+        "rain_probability": 100
+      },
+      {
+        "date": "2026-09-12",
+        "condition": "rainy",
+        "temp_high": 24.6,
+        "temp_low": 19.6,
+        "rain_probability": 92
+      }
+    ]
+  }
+}

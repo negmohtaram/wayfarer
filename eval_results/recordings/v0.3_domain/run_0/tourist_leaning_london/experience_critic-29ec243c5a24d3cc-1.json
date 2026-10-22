@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for London.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 7.0/10,\nlocal preference 3.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Millennium Bridge walk at dawn, St Paul's to Tate, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday, Tate Modern Turbine Hall and Level 10 viewing gallery, Borough Market on a weekday morning\n  Types: scenic, cultural, cultural, food | Avg local score: 3.8 | Avg fit score: 0.83\nDay 2 (Peak Day): Maltby Street Market Saturday morning under the arches, Bermondsey Beer Mile on a Saturday, Padella pasta on Borough High Street, pre-5pm, Greenwich Park Observatory at golden hour\n  Types: food, food, food, scenic | Avg local score: 7.2 | Avg fit score: 0.75\nDay 3 (The Farewell Day): Primrose Hill at sunrise for the London panorama, Regent's Canal towpath from Little Venice to Broadway Market, Hackney Wick canal walk and Crate Brewery, Dennis Severs' House candlelit evening, Spitalfields\n  Types: scenic, active, active, cultural | Avg local score: 7.6 | Avg fit score: 0.77\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Local immersion scores (7.2, 7.6) far exceed the traveler's low local preference (3/10), making the itinerary feel too \"local\".",
+        "Day\u202f2 is food\u2011heavy (three food stops) while the traveler rates culture higher (7/10) than food (5/10); cultural depth is lacking.",
+        "The activity density on Day\u202f3 (multiple active walks plus cultural stop) may push the moderate pace (5/10) toward a rushed feel."
+      ],
+      "suggestions": [
+        "Replace one of the Day\u202f2 food\u2011centric stops (e.g., Bermondsey Beer Mile) with a cultural venue such as the Design Museum or a guided historic walk in Greenwich.",
+        "Swap the highly local Maltby Street Market for a more iconic market like Columbia Road Flower Market or a classic London food hall (e.g., Harrods Food Hall) to lower the local score.",
+        "On Day\u202f3, consolidate the canal walks into a single, shorter route (e.g., Little Venice to Camden) and add a relaxed cultural activity like a visit to the Wallace Collection to balance activity with the traveler's moderate pace.",
+        "Add a brief cultural highlight on Day\u202f2\u2014perhaps a visit to the Royal Observatory's historic rooms or the National Maritime Museum\u2014to better align with the traveler's culture interest."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

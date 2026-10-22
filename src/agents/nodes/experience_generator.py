@@ -2,7 +2,7 @@ from src.agents.state import PlanningState
 from src.knowledge.rag import get_city_experiences
 from src.models.experience import Experience
 from src.models.persona import TravelerPersona
-from src.models.constraints import wheelchair_ok
+from src.models.constraints import check_experience
 from src.config import EXPERIENCE_POOL_MULTIPLIER
 
 
@@ -35,8 +35,6 @@ def score_experience(experience: Experience, persona: TravelerPersona, weather_g
             physical_ok = 0.1
         elif experience.physical_intensity == "medium":
             physical_ok = 0.6
-    if "wheelchair" in persona.physical_constraints and experience.physical_intensity != "low":
-        physical_ok = 0.0
 
     # Crowd tolerance
     crowd_penalty = 0.0
@@ -90,17 +88,25 @@ async def experience_generator_node(state: PlanningState) -> PlanningState:
         state["error"] = f"No experiences found for {city}"
         return state
 
-    # Score each experience
-    scored = []
+    # Hard constraints first: an infeasible stop is removed before scoring, so no
+    # preference score can ever bring it back. The reasons are kept for the trace.
+    feasible, rejected = [], []
     for exp in all_experiences:
+        violations = check_experience(exp, persona)
+        if violations:
+            rejected.extend(violations)
+        else:
+            feasible.append(exp)
+    state["rejected"] = rejected
+    if rejected:
+        state["log"].append(f"🚫 {len(rejected)} experiences rejected by hard constraints")
+
+    # Then rank what is left by preference
+    scored = []
+    for exp in feasible:
         exp.persona_score = score_experience(exp, persona)
         scored.append(exp)
-
-    # Sort by score, keep top experiences
     scored.sort(key=lambda e: e.persona_score or 0, reverse=True)
-
-    # Filter out experiences that are completely wrong (accessibility)
-    scored = [e for e in scored if wheelchair_ok(e, persona)]
 
     # Ensure variety across types
     experience_pool = _ensure_variety(scored, persona)

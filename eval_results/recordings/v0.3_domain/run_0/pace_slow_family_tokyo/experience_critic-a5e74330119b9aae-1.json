@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Tokyo.\n\nTraveler: family, pace 8.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Meiji Shrine morning visit, Hamarikyu Gardens tea ceremony, Shibuya Crossing at night\n  Types: cultural, cultural, scenic | Avg local score: 5.0 | Avg fit score: 0.90\nDay 2 (Peak Day): Senso-ji Temple at 6am, Nezu Shrine torii gates in morning mist, Sumida River evening boat\n  Types: cultural, scenic, scenic | Avg local score: 6.7 | Avg fit score: 0.90\nDay 3 (The Farewell Day): Tsukiji outer market breakfast, Yanaka neighborhood wandering, Depachika (department store basement food hall)\n  Types: food, serendipity, food | Avg local score: 8.0 | Avg fit score: 0.85\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.0,
+      "issues": [
+        "Day 2 starts at 6\u202fam with Senso\u2011ji Temple, which may be too early for a family seeking a slow (8/10) pace.",
+        "Day 2\u2019s schedule packs two scenic activities after the early temple visit, risking fatigue and limited flexibility.",
+        "Day 3 ends with food\u2011focused stops but lacks a distinct, memorable \u201cfarewell\u201d moment that ties the trip together."
+      ],
+      "suggestions": [
+        "Shift the Senso\u2011ji visit to a later time (e.g., 9\u202fam) and add a brief, kid\u2011friendly stroll through the surrounding Nakamise\u2011dori market for snacks and souvenirs.",
+        "Replace or complement the Sumida River boat with a short, relaxed riverbank walk or a river cruise that departs later in the evening, allowing the family to unwind.",
+        "Enhance the farewell day by adding a sunset viewpoint (e.g., Tokyo Skytree observation deck or Odaiba\u2019s seaside promenade) followed by a family\u2011style dinner in a local izakaya or a themed restaurant.",
+        "Consider inserting a short rest break or park visit (e.g., Ueno Park) between the Yanaka wander and the depachika to keep the pace gentle."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

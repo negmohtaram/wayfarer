@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
+from .constraints import ConstraintViolation
 from .experience import ScheduledExperience
 from .persona import TravelerPersona
 
@@ -32,6 +33,7 @@ class CritiqueResult(BaseModel):
     suggestions: list[str] = Field(default_factory=list)
     verdict: Literal["approve", "revise", "reject_day", "error"]
     affected_days: list[int] = Field(default_factory=list)
+    violations: list[ConstraintViolation] = Field(default_factory=list)   # broken hard constraints
 
 
 class HighlightItem(BaseModel):
@@ -52,5 +54,6 @@ class Itinerary(BaseModel):
     highlight_rankings: list[HighlightItem] = Field(default_factory=list)
     revision_count: int = 0
     total_cost: float = 0.0
-    status: str = "planning"  # "planning" | "complete" | "replanning"
+    status: str = "planning"  # "planning" | "complete" | "infeasible" | "replanning"
+    violations: list[ConstraintViolation] = Field(default_factory=list)  # hard constraints still broken
     generation_log: list[str] = Field(default_factory=list)

@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "site": "disruption_analyzer",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "DisruptionAnalysis"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a travel replanner. Classify the traveler's disruption and identify which scheduled experiences are affected."
+    },
+    {
+      "role": "human",
+      "content": "Traveler reported: \"We absolutely love this neighborhood and want to spend more time exploring it.\"\n\nRemaining schedule:\nDay 2: Primrose Hill at sunrise for the London panorama, Portobello Road Market on a Saturday morning, Regent's Canal towpath from Little Venice to Broadway Market, Shoreditch street art walk, Rivington Street to Brick Lane\nDay 3: Broadway Market Saturday and London Fields lido, Hackney Wick canal walk and Crate Brewery, Greenwich Park Observatory at golden hour, Dennis Severs' House candlelit evening, Spitalfields"
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.agents.replan_graph:DisruptionAnalysis",
+    "data": {
+      "disruption_type": "love_neighborhood",
+      "affected_experiences": [
+        "Primrose Hill at sunrise for the London panorama",
+        "Portobello Road Market on a Saturday morning",
+        "Regent's Canal towpath from Little Venice to Broadway Market",
+        "Shoreditch street art walk",
+        "Rivington Street to Brick Lane",
+        "Broadway Market Saturday and London Fields lido",
+        "Hackney Wick canal walk and Crate Brewery",
+        "Greenwich Park Observatory at golden hour",
+        "Dennis Severs' House candlelit evening",
+        "Spitalfields"
+      ],
+      "recommendation": "Allocate extra time to explore the beloved neighborhood by shortening or rescheduling other activities. Prioritize nearby attractions and consider dropping less essential stops to maintain a relaxed pace."
+    }
+  }
+}

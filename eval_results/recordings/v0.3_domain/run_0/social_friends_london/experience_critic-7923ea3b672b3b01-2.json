@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 2-day itinerary for London.\n\nTraveler: friends, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Millennium Bridge walk at dawn, St Paul's to Tate, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday, Tate Modern Turbine Hall and Level 10 viewing gallery, Borough Market on a weekday morning\n  Types: scenic, cultural, cultural, food | Avg local score: 3.8 | Avg fit score: 0.79\nDay 2 (The Farewell Day): Shoreditch street art walk, Rivington Street to Brick Lane, Portobello Road Market on a Saturday morning, Greenwich Park Observatory at golden hour, Frank's Cafe rooftop, Peckham, summer evening\n  Types: serendipity, serendipity, scenic, nightlife | Avg local score: 6.1 | Avg fit score: 0.82\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 1 is heavily weighted toward major cultural institutions, giving a low local authenticity score (3.8) and feeling rushed for a traveler with a moderate pace (5/10).",
+        "The sequence of three museum visits leaves little downtime and limits variety; the day lacks a distinct local or culinary anchor beyond Borough Market.",
+        "Day 2 leans heavily on serendipitous street\u2011art walks and nightlife, which may overwhelm a traveler seeking a balanced pace and could feel repetitive after two consecutive serendipity activities.",
+        "Both days have modest fit scores (<0.85), indicating the activity mix does not align well with the traveler\u2019s evenly\u2011balanced interests in pace, food, culture, and local flavor."
+      ],
+      "suggestions": [
+        "Swap one of the Day\u202f1 museum visits (e.g., Tate Modern) for a low\u2011key local experience such as a walk through the historic St\u202fJames\u2019s Market or a tea break at a traditional caf\u00e9 near St\u202fPaul\u2019s.",
+        "Insert a short rest or park break (e.g., a stroll through St\u202fPaul\u2019s Cathedral garden) to respect the traveler\u2019s moderate pace.",
+        "Add a dedicated food experience on Day\u202f2, such as dinner at a classic East\u202fEnd pub or a pop\u2011up street\u2011food stall in Peckham, to balance the serendipity focus.",
+        "Combine the Shoreditch street\u2011art walk with a brief cultural stop (e.g., Geffrye Museum of the Home) to increase variety and raise the local score.",
+        "Consider moving the Portobello Road Market visit to Day\u202f1 (if the traveler is not limited to Saturday) to spread scenic market experiences across both days."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2
+      ]
+    }
+  }
+}

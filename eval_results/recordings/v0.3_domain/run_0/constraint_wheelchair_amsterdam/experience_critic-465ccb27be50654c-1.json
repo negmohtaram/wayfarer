@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 9.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jewish Historical Museum and Portuguese Synagogue, Foam Photography Museum, Indonesian rijsttafel dinner\n  Types: cultural, cultural, food | Avg local score: 6.3 | Avg fit score: 0.81\nDay 2 (Peak Day): Brouwerij 't IJ craft beer in a windmill, NEMO Science Museum rooftop terrace, Canal cruise with local operator Wetlands Safari\n  Types: food, scenic, scenic | Avg local score: 6.7 | Avg fit score: 0.82\nDay 3 (The Farewell Day): Morning coffee at a specialty third-wave cafe, Floating flower market on Singel canal, Begijnhof hidden courtyard\n  Types: food, serendipity, serendipity | Avg local score: 6.7 | Avg fit score: 0.83\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Pace is too dense for a traveler who prefers a very slow (9/10) rhythm \u2013 three separate sites on Day\u202f1 and three activities on Day\u202f2 leave little downtime.",
+        "Day\u202f1 leans heavily on cultural venues, which may exceed the traveler\u2019s moderate (5/10) cultural appetite.",
+        "Day\u202f3\u2019s farewell lacks a standout, memorable highlight; the coffee, flower market, and courtyard are pleasant but may feel anticlimactic."
+      ],
+      "suggestions": [
+        "Trim Day\u202f1 to two key cultural spots (e.g., combine the Jewish Historical Museum with the Portuguese Synagogue as a single heritage walk) and add a relaxed lunch break.",
+        "Replace one of Day\u202f2\u2019s scenic activities with a leisurely stroll through a park or a canal-side bench to honor the slow\u2011pace preference.",
+        "End Day\u202f3 with a sunset canal dinner at a local eatery or a private boat ride to give a memorable closing moment.",
+        "Introduce a short \u2018free\u2011explore\u2019 slot each day (30\u201145\u202fmin) for spontaneous serendipity, aligning with the traveler\u2019s moderate local interest."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

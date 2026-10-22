@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 2-day itinerary for London.\n\nTraveler: couple, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Millennium Bridge walk at dawn, St Paul's to Tate, Broadway Market Saturday and London Fields lido, Padella pasta on Borough High Street, pre-5pm, Dennis Severs' House candlelit evening, Spitalfields\n  Types: scenic, serendipity, food, cultural | Avg local score: 6.8 | Avg fit score: 0.89\nDay 2 (The Farewell Day): Primrose Hill at sunrise for the London panorama, Regent's Canal towpath from Little Venice to Broadway Market, Hackney Wick canal walk and Crate Brewery, Greenwich Park Observatory at golden hour\n  Types: scenic, active, active, scenic | Avg local score: 7.2 | Avg fit score: 0.92\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 7.2,
+      "issues": [
+        "Day 2 leans heavily on scenic and active types, lacking food or cultural experiences, making the day feel less varied.",
+        "The itinerary jumps across distant neighborhoods (Little Venice \u2192 Hackney Wick \u2192 Greenwich), which may strain a moderate-paced couple.",
+        "Two consecutive active segments could feel intense for a traveler preferring a 5/10 pace."
+      ],
+      "suggestions": [
+        "Swap the Hackney Wick canal walk for a cultural stop near Regent's Canal, such as the Museum of London Docklands, to add variety.",
+        "Insert a midday food break at a local spot along the canal (e.g., The Narrow Boat Caf\u00e9 or a riverside gastropub) to balance activity with nourishment.",
+        "Group the Greenwich segment with a brief visit to the historic Cutty Sark or the Greenwich Market to provide cultural depth and reduce travel time.",
+        "Consider a relaxed afternoon tea in Greenwich Park before the observatory to soften the day's intensity."
+      ],
+      "verdict": "approve",
+      "affected_days": [
+        2
+      ]
+    }
+  }
+}

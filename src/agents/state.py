@@ -1,6 +1,7 @@
 from typing import TypedDict, Optional, Any
 from src.models.persona import TravelerPersona
 from src.models.experience import Experience
+from src.models.constraints import ConstraintViolation
 from src.models.itinerary import Itinerary, CritiqueResult
 
 
@@ -15,6 +16,7 @@ class BaseGraphState(TypedDict, total=False):
 class PlanningState(BaseGraphState, total=False):
     city_context: str
     experience_pool: list[Experience]
+    rejected: list[ConstraintViolation]     # stops removed by hard constraints, with reasons
     optimized_days: list[list[Experience]]
     critiques: list[CritiqueResult]
     revision_count: int

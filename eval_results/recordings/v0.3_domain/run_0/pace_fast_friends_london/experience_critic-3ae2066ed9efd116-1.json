@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for London.\n\nTraveler: friends, pace 2.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Millennium Bridge walk at dawn, St Paul's to Tate, Tate Modern Turbine Hall and Level 10 viewing gallery, Borough Market on a weekday morning, Padella pasta on Borough High Street, pre-5pm, Leake Street Arches (the Banksy Tunnel) at dusk\n  Types: scenic, cultural, food, food, serendipity | Avg local score: 5.2 | Avg fit score: 0.72\nDay 2 (Peak Day): Shoreditch street art walk, Rivington Street to Brick Lane, Bermondsey Beer Mile on a Saturday, Greenwich Park Observatory at golden hour, Frank's Cafe rooftop, Peckham, summer evening, Dennis Severs' House candlelit evening, Spitalfields\n  Types: serendipity, food, scenic, nightlife, cultural | Avg local score: 6.9 | Avg fit score: 0.72\nDay 3 (The Farewell Day): Primrose Hill at sunrise for the London panorama, Portobello Road Market on a Saturday morning, Regent's Canal towpath from Little Venice to Broadway Market, The British Museum \u2014 Room 40 (ancient Mesopotamia) on a Tuesday, Hackney Wick canal walk and Crate Brewery\n  Types: scenic, serendipity, active, cultural, active | Avg local score: 6.1 | Avg fit score: 0.71\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 5.5,
+      "issues": [
+        "Day\u202f2 packs 6 distinct activities (street\u2011art walk, food crawl, beer mile, observatory, rooftop, candlelit house) which exceeds a very slow (2/10) pace and risks fatigue.",
+        "Day\u202f3 also crams 5 stops (sunrise hill, market, canal towpath, museum room, brewery) leaving little time to savor each experience.",
+        "The itinerary leans heavily toward tourist\u2011centric spots (Borough Market, Greenwich Observatory, British Museum) despite a moderate local preference (5/10).",
+        "Narrative cohesion is thin on Day\u202f2 \u2013 the mix of street art, food, nightlife, and a historic house feels scattered rather than a single thematic thread."
+      ],
+      "suggestions": [
+        "Trim Day\u202f2 to a clear theme, e.g., \u201cEast London Street\u2011Art & Food\u201d \u2013 keep the Shoreditch walk, Brick Lane food stop, and maybe one evening activity (Frank\u2019s Cafe) and drop the Greenwich Observatory and Dennis Severs\u2019 House for a later day or another trip.",
+        "On Day\u202f3, choose either a relaxed scenic finale (Primrose Hill sunrise + canal walk) OR a cultural wrap\u2011up (Portobello Market + British Museum) \u2013 remove the brewery visit to preserve a calm farewell.",
+        "Swap one tourist\u2011heavy stop for a more local experience: replace the British Museum Room\u202f40 with a community\u2011run gallery in Hackney, or swap Greenwich Observatory for the Greenwich Market and the Royal Observatory\u2019s park walk.",
+        "Add explicit downtime (e.g., a coffee break at a local caf\u00e9) between activities to honor the 2/10 pace preference."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        2,
+        3
+      ]
+    }
+  }
+}

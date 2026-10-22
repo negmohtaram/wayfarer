@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Tokyo.\n\nTraveler: solo, pace 9.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 5.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Shimokitazawa vintage record and clothes shopping, Shibuya Crossing at night, Ramen at a standing counter at midnight\n  Types: serendipity, scenic, food | Avg local score: 7.2 | Avg fit score: 0.75\nDay 2 (Peak Day): Senso-ji Temple at 6am, Sumida River evening boat, Izakaya evening in Yurakucho under the tracks\n  Types: cultural, scenic, food | Avg local score: 6.3 | Avg fit score: 0.80\nDay 3 (The Farewell Day): Tsukiji outer market breakfast, Hamarikyu Gardens tea ceremony, Depachika (department store basement food hall)\n  Types: food, cultural, food | Avg local score: 6.7 | Avg fit score: 0.81\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Pace mismatch: traveler prefers a very slow pace (9/10) but each day packs 3 distinct activities, leaving little downtime.",
+        "Day 1 ends with midnight ramen, which may feel unsafe or exhausting for a solo traveler and disrupts the slow\u2011travel intent.",
+        "Day 2\u2019s early 6\u202fam temple visit followed by a boat ride and izakaya creates a tight schedule, limiting relaxation.",
+        "Day 3 repeats food\u2011focused activities (breakfast market and depachika) and lacks a memorable, reflective closing experience."
+      ],
+      "suggestions": [
+        "Insert scheduled rest periods (e.g., a 1\u2011hour coffee break or park sit\u2011down) between activities on each day to honor the slow\u2011travel preference.",
+        "Replace the midnight ramen with an earlier dinner at a relaxed izakaya or a small local eatery, allowing the traveler to wind down before nightfall.",
+        "On Day 2, consider moving the Sumida River boat to mid\u2011day and shifting the izakaya to a later, more leisurely dinner, giving a buffer after the early temple visit.",
+        "For Day 3, swap the depachika visit for a sunset view at Odaiba\u2019s seaside park or a short traditional performance (e.g., a tea\u2011house cultural demo) to create a memorable farewell.",
+        "Add a brief reflective activity on each day\u2014such as journaling in a quiet caf\u00e9 or a short walk in a nearby garden\u2014to reinforce narrative coherence and provide downtime."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        1,
+        2,
+        3
+      ]
+    }
+  }
+}

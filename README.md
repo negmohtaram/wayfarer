@@ -59,6 +59,19 @@ The planner is measured on 56 fixed scenarios (personas, budgets, accessibility 
 
 **Comparing versions.** With 56 scenarios and a pass rate near 93%, the interval is about plus or minus 7 points. Two separate pass rates therefore can't show a 5-point improvement. Changes are compared on the same scenarios instead. We count the scenarios a change fixes and the ones it breaks, and bootstrap the difference over scenarios. A new planner version makes new model calls, so it runs with repeats, which keeps model noise from looking like an improvement. Reaching plus or minus 5 points on a single rate would need roughly twice as many scenarios.
 
+### Hard constraints before scoring (v0.3_domain)
+
+Wheelchair access and single-stop cost are now checked before any stop is scored, and a day over the budget ceiling can no longer be approved by the budget critic. The 52 scenarios this change does not touch replay exactly. The 4 budget scenarios plan differently, so their model calls were recorded again into `eval_results/recordings/v0.3_domain/`, once each.
+
+| | baseline_v1 | v0.3_domain |
+|---|---|---|
+| Valid itinerary rate | 92.9% | 100% (56 of 56) |
+| Crashes | 1 | 0 |
+| Fixed / broken scenarios | | 4 / 0 |
+| Mean persona score | 0.82 | 0.82 |
+
+Four fixes against no breaks is not significant on its own (sign test p about 0.13). The case rests on each fix having a known cause and a test that failed before the change. The budget is met by removing the most expensive stop, so those days are shorter. Swapping in a cheaper stop of the same kind is planned. The report is in `docs/v0.3_domain_report.json`.
+
 ## Status
 
 In active development. See `docs/evaluation.md` for how the planner is measured.

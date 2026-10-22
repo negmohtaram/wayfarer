@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "site": "experience_critic",
+    "model": "openai/gpt-oss-120b",
+    "temperature": 0.3,
+    "schema": "CritiqueResult"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a precise travel itinerary critic. Return structured evaluations."
+    },
+    {
+      "role": "human",
+      "content": "You are evaluating a 3-day itinerary for Amsterdam.\n\nTraveler: solo, pace 5.0/10 (10=very slow),\nfood 5.0/10, culture 5.0/10,\nlocal preference 9.0/10 (10=very local).\n\nItinerary:\nDay 1 (Orientation Day): Jordaan neighborhood morning walk, Breakfast at a Jordaan brown cafe, Begijnhof hidden courtyard, Sunset canal bike ride\n  Types: serendipity, food, serendipity, active | Avg local score: 8.4 | Avg fit score: 0.89\nDay 2 (Peak Day): Dawn bike ride through Vondelpark, NDSM Wharf street art and flea market, Noordermarkt organic farmers market, EYE Filmmuseum and IJ riverbank\n  Types: active, serendipity, food, cultural | Avg local score: 8.8 | Avg fit score: 0.89\nDay 3 (The Farewell Day): Albert Cuyp Market lunch, Indonesian breakfast at a warung, Surinamese lunch in De Pijp, De Pijp golden hour wander zone\n  Types: food, food, food, serendipity | Avg local score: 8.8 | Avg fit score: 0.87\n\nEvaluate on these dimensions:\n1. Variety \u2014 is there a healthy mix of experience types or is it repetitive?\n2. Emotional arc \u2014 does intensity/excitement build toward a peak day and land well?\n3. Narrative coherence \u2014 does each day feel like a chapter with a theme?\n4. Ending quality \u2014 does the final day close on something memorable?\n5. Persona fit \u2014 do the experience types match what this traveler actually wants?\n\nReturn critic_type as exactly \"experience\".\nScore 0-10. Verdict must be \"approve\" (score>=7), \"revise\" (4-7), or \"reject_day\" (<4).\nList specific issues and concrete suggestions. affected_days should be day numbers with problems."
+    }
+  ],
+  "result": {
+    "kind": "pydantic",
+    "cls": "src.models.itinerary:CritiqueResult",
+    "data": {
+      "critic_type": "experience",
+      "score": 6.5,
+      "issues": [
+        "Day 3 is heavily weighted toward food (3 meals) with only one serendipity activity, making it feel repetitive and not aligned with the traveler's moderate food interest (5/10).",
+        "The farewell day lacks a memorable climax or reflective element, risking an underwhelming close after a high\u2011energy peak on Day 2.",
+        "Cultural exposure drops to zero on Day 3, despite the traveler\u2019s moderate interest in culture (5/10)."
+      ],
+      "suggestions": [
+        "Swap one of the food stops for a low\u2011key cultural activity, e.g., a short visit to the Rijksmuseum\u2019s courtyard or a local music venue in De Pijp.",
+        "Add a gentle active element, such as a late\u2011afternoon canal walk or a short bike ride along the Amstel, to balance the day\u2019s pace.",
+        "Introduce a reflective closing moment \u2013 a sunset drink at a local bar with a view of the canals or a quiet moment at the historic Begijnhof (re\u2011visit at dusk).",
+        "Reduce the number of dedicated meals to two (e.g., keep the Indonesian breakfast and Surinamese lunch) and replace the third food slot with the new activity."
+      ],
+      "verdict": "revise",
+      "affected_days": [
+        3
+      ]
+    }
+  }
+}

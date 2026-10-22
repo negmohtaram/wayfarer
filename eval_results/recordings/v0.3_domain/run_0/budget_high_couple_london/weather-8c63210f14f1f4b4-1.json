@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "site": "weather",
+    "city": "london",
+    "start_date": "2026-09-10",
+    "days": 2
+  },
+  "messages": null,
+  "result": {
+    "kind": "json",
+    "data": [
+      {
+        "date": "2026-09-10",
+        "condition": "partly_cloudy",
+        "temp_high": 20.3,
+        "temp_low": 14.0,
+        "rain_probability": 48
+      },
+      {
+        "date": "2026-09-11",
+        "condition": "rainy",
+        "temp_high": 21.6,
+        "temp_low": 16.2,
+        "rain_probability": 76
+      }
+    ]
+  }
+}

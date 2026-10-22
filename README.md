@@ -72,6 +72,28 @@ Wheelchair access and single-stop cost are now checked before any stop is scored
 
 Four fixes against no breaks is not significant on its own (sign test p about 0.13). The case rests on each fix having a known cause and a test that failed before the change. The budget is met by removing the most expensive stop, so those days are shorter. Swapping in a cheaper stop of the same kind is planned. The report is in `docs/v0.3_domain_report.json`.
 
+## Trip chat (router)
+
+The trip chat will let a traveller change a finished plan with messages such as "day 2 feels rushed" or "add a fado evening to Saturday". The first step is a router. One model call with a forced tool returns the intent and the day the message is about. The intents are `change_setting`, `feedback`, `explain`, `what_if`, `ask`, `out_of_scope` and `none_of_these`. An invalid reply gets one retry, then the router falls back to `none_of_these`. Code in `src/chat/`. The router is measured on its own and is not connected to the app or the API yet.
+
+It is tested on two hand-labelled sets. Amsterdam has 200 messages for a 3-day trip. Lisbon has 105 messages for a 4-day trip, written separately and held out. The v1 prompt can add similar labelled examples, picked by embedding similarity from the Amsterdam set. That condition is only measured on Lisbon, so no test message appears in its own examples.
+
+| set | prompt | intent correct (95% CI) | intent and day correct |
+|---|---|---|---|
+| Amsterdam | v0 | 84.0% (78.5 to 89.0) | 81.5% |
+| Lisbon | v0 | 77.1% (68.6 to 84.8) | 69.5% |
+| Lisbon | v1 with examples | 97.1% (93.3 to 100) | 96.2% |
+
+On v0, 11 of the 13 messages with the right intent but the wrong day were about "the last day" or "our final day". The v1 prompt returns them as a reference to the last day, and code turns that into a number for the trip at hand. All five prompt injection messages in the Lisbon set were routed as `out_of_scope`.
+
+Replay all three with no API key:
+
+```bash
+python -m src.evaluation.chat_eval
+python -m src.evaluation.chat_eval --set lisbon
+python -m src.evaluation.chat_eval --set lisbon --prompt v1 --retrieval
+```
+
 ## Status
 
 In active development. See `docs/evaluation.md` for how the planner is measured.

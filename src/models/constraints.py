@@ -76,3 +76,22 @@ def split_mobility(values: list[str]) -> tuple[list[str], list[str]]:
 def wheelchair_ok(experience: Experience, persona: TravelerPersona) -> bool:
     """One wheelchair rule for the planner, the replanner and the validator."""
     return "wheelchair" not in persona.hard.mobility or experience.physical_intensity == "low"
+
+
+def check_experience(experience: Experience, persona: TravelerPersona) -> list[ConstraintViolation]:
+    """Hard rules one stop must pass before it may be scored. Empty list = feasible."""
+    hard = persona.hard
+    found = []
+    if not wheelchair_ok(experience, persona):
+        found.append(ConstraintViolation(
+            code="ACCESSIBILITY", affected_ids=[experience.id],
+            observed=experience.physical_intensity, required="low",
+            message=f"{experience.name} is not wheelchair accessible",
+        ))
+    if experience.cost_euros > hard.day_budget_ceiling:
+        found.append(ConstraintViolation(
+            code="OVER_DAY_BUDGET", affected_ids=[experience.id],
+            observed=experience.cost_euros, required=hard.day_budget_ceiling,
+            message=f"{experience.name} alone costs more than a whole day's budget",
+        ))
+    return found

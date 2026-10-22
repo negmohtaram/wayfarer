@@ -74,7 +74,7 @@ Four fixes against no breaks is not significant on its own (sign test p about 0.
 
 ## Trip chat (router)
 
-A traveller can talk to a finished plan, for example "day 2 feels rushed" or "add a fado evening to Saturday". The first step is a router. One model call with a forced tool returns the intent and the day the message is about. The intents are `change_setting`, `feedback`, `explain`, `what_if`, `ask`, `out_of_scope` and `none_of_these`. An invalid reply gets one retry, then the router falls back to `none_of_these`. Code in `src/chat/`. The steps after routing are not built yet.
+A traveller can talk to a finished plan, for example "day 2 feels rushed" or "add a fado evening to Saturday". The first step is a router. One model call with a forced tool returns the intent and the day the message is about. The intents are `change_setting`, `feedback`, `explain`, `what_if`, `ask`, `out_of_scope` and `none_of_these`. An invalid reply gets one retry, then the router falls back to `none_of_these`. Code in `src/chat/`. The router is measured on its own and is not connected to the app or the API yet.
 
 It is tested on two hand-labelled sets. Amsterdam has 200 messages for a 3-day trip. Lisbon has 105 messages for a 4-day trip, written separately and held out. The v1 prompt can add similar labelled examples, picked by embedding similarity from the Amsterdam set. That condition is only measured on Lisbon, so no test message appears in its own examples.
 

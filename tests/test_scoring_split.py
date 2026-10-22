@@ -99,3 +99,12 @@ def test_swap_and_budget_fix_on_the_same_day_do_not_crash():
     ids = {s.experience.id for s in out["itinerary"].days[0].experiences}
     assert "touristy" not in ids            # swapped for the local stop
     assert len(ids) == 1                    # and the most expensive stop removed
+
+
+def test_a_plan_still_over_budget_after_revisions_is_infeasible_not_complete():
+    from src.agents.nodes.highlight_ranker import highlight_ranker_node
+    itinerary = itinerary_with([200, 50])
+    critique = asyncio.run(budget_critic(itinerary))
+    out = asyncio.run(highlight_ranker_node({"itinerary": itinerary, "critiques": [critique]}))
+    assert out["itinerary"].status == "infeasible"
+    assert [v.code for v in out["itinerary"].violations] == ["DAILY_BUDGET"]

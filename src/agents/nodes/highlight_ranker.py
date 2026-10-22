@@ -88,7 +88,12 @@ async def highlight_ranker_node(state: PlanningState) -> PlanningState:
     ranked_items.sort(key=lambda r: r.highlight_score, reverse=True)
 
     itinerary.highlight_rankings = ranked_items
-    itinerary.status = "complete"
+    # Revisions are over. A hard constraint still broken means there is no valid plan:
+    # say so with the reasons instead of presenting it as complete.
+    itinerary.violations = [v for c in state.get("critiques", []) for v in c.violations]
+    itinerary.status = "infeasible" if itinerary.violations else "complete"
+    if itinerary.violations:
+        state["log"].append(f"🚫 No plan fits every hard constraint: {len(itinerary.violations)} still broken")
     state["itinerary"] = itinerary
 
     must_dos = sum(1 for r in ranked_items if r.tier == "must_do")

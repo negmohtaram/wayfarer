@@ -48,11 +48,15 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
     persona = itinerary.persona
     revised_day_numbers: set[int] = set()
+    # Each day is edited as a plain list of stops and rebuilt into a schedule once at the end,
+    # so scheduled stops and raw replacements never sit in the same list.
+    stops_by_day: dict[int, list[Experience]] = {}
 
     for day in itinerary.days:
         if day.day_number not in days_to_revise:
             continue
 
+        stops = [s.experience for s in day.experiences]
         changed = False
 
         for critique in critiques:
@@ -61,31 +65,31 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
             # ── Energy: trim overloaded days for slow travelers ──────────────
             if critique.critic_type == "energy":
-                if persona.pace >= 7 and len(day.experiences) > 4:
-                    day.experiences = day.experiences[:3]
+                if persona.pace >= 7 and len(stops) > 4:
+                    stops = stops[:3]
                     changed = True
 
             # ── Authenticity: swap lowest local-score experience ─────────────
             elif critique.critic_type == "authenticity" and day.day_number in critique.affected_days:
-                day.experiences.sort(key=lambda s: s.experience.local_score)
-                for sched in day.experiences[:1]:
-                    replacement = _find_replacement(sched.experience, unused, persona, "local")
+                stops.sort(key=lambda e: e.local_score)
+                for stop in stops[:1]:
+                    replacement = _find_replacement(stop, unused, persona, "local")
                     if replacement:
-                        day.experiences.remove(sched)
-                        day.experiences.append(replacement)
+                        stops.remove(stop)
+                        stops.append(replacement)
                         unused.remove(replacement)
                         used_ids.add(replacement.id)
                         changed = True
 
             # ── Experience: introduce type variety ───────────────────────────
             elif critique.critic_type == "experience" and day.day_number in critique.affected_days:
-                cultural = [s for s in day.experiences if s.experience.experience_type == "cultural"]
+                cultural = [e for e in stops if e.experience_type == "cultural"]
                 if len(cultural) >= 3:
                     to_replace = cultural[-1]
-                    replacement = _find_replacement(to_replace.experience, unused, persona, "variety")
+                    replacement = _find_replacement(to_replace, unused, persona, "variety")
                     if replacement:
-                        day.experiences.remove(to_replace)
-                        day.experiences.append(replacement)
+                        stops.remove(to_replace)
+                        stops.append(replacement)
                         unused.remove(replacement)
                         changed = True
                 else:
@@ -97,10 +101,10 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
             # ── Budget: remove most expensive experience ─────────────────────
             elif critique.critic_type == "budget" and day.day_number in critique.affected_days:
-                if day.experiences:
-                    most_expensive = max(day.experiences, key=lambda s: s.experience.cost_euros)
-                    if most_expensive.experience.cost_euros > 0:
-                        day.experiences.remove(most_expensive)
+                if stops:
+                    most_expensive = max(stops, key=lambda e: e.cost_euros)
+                    if most_expensive.cost_euros > 0:
+                        stops.remove(most_expensive)
                         changed = True
 
             # ── Logistics: rebuild day schedule to fix timing violations ─────
@@ -120,6 +124,7 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
 
         if changed:
             revised_day_numbers.add(day.day_number)
+            stops_by_day[day.day_number] = stops
 
     # Rebuild full schedule for every modified day
     if revised_day_numbers:
@@ -128,7 +133,7 @@ async def revision_agent_node(state: PlanningState) -> PlanningState:
         for i, day in enumerate(itinerary.days):
             if day.day_number not in revised_day_numbers:
                 continue
-            exps = [e if isinstance(e, Experience) else e.experience for e in day.experiences]
+            exps = stops_by_day[day.day_number]
             weather_dict = day.weather.model_dump() if day.weather else {}
             itinerary.days[i] = _build_day_schedule(
                 exps, persona, day.day_number, persona.trip_days, weather_dict

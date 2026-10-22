@@ -8,6 +8,7 @@ from typing import Any, Callable, Coroutine
 import groq
 from langchain_groq import ChatGroq
 
+from src.agents.ratelimit import NoCapacity, estimate_tokens, limiter_for, used_tokens
 from src.config import GROQ_API_KEY, GROQ_MODEL
 
 logger = logging.getLogger(__name__)
@@ -117,24 +118,36 @@ async def call_with_retry(
     from src.evaluation.recording import active
 
     recorder = active()
+    model = (meta or {}).get("model", GROQ_MODEL)
     if recorder is not None:
         if meta is None:
             raise ValueError("model call without meta while recording: add meta at the call site")
         messages = args[0] if args else kwargs.get("input")
-        return await recorder.call(meta, messages, lambda: _retry(fn, args, kwargs, policy))
-    return await _retry(fn, args, kwargs, policy)
+        return await recorder.call(meta, messages, lambda: _retry(fn, args, kwargs, policy, model))
+    return await _retry(fn, args, kwargs, policy, model)
 
 
-async def _retry(fn, args, kwargs, policy: RetryPolicy):
+async def _retry(fn, args, kwargs, policy: RetryPolicy, model: str = GROQ_MODEL):
     start = _now()
     attempts: list[tuple[str, int | None, str]] = []
+    limiter = limiter_for(model)
+    reserved = estimate_tokens(args[0] if args else kwargs.get("input"))
     for attempt in range(policy.max_attempts):
         left = policy.deadline - (_now() - start)
         try:
-            return await asyncio.wait_for(fn(*args, **kwargs), timeout=min(policy.attempt_timeout, left))
+            # Every attempt is a request the provider counts, so every attempt is admitted.
+            await limiter.acquire(reserved, max_wait=left)
+        except NoCapacity as exc:
+            attempts.append((TRANSIENT, None, f"no rate-limit capacity before the deadline: {exc}"))
+            raise LLMCallError(TRANSIENT, None, attempts) from None
+        left = policy.deadline - (_now() - start)
+        try:
+            result = await asyncio.wait_for(fn(*args, **kwargs), timeout=min(policy.attempt_timeout, left))
         except Exception as exc:       # CancelledError is not an Exception: cancellation is never retried
             kind, status = classify(exc)
             attempts.append((kind, status, repr(exc)[:300]))
+            if status == 429:
+                limiter.drain()
             if kind == PERMANENT or attempt == policy.max_attempts - 1:
                 raise LLMCallError(kind, status, attempts) from exc
             # Full jitter: a random wait up to the backoff cap, so clients that failed together
@@ -149,3 +162,8 @@ async def _retry(fn, args, kwargs, policy: RetryPolicy):
             logger.warning("LLM call failed (attempt %d/%d, %s, status %s): %s; retrying in %.1fs",
                            attempt + 1, policy.max_attempts, kind, status, exc, delay)
             await _sleep(delay)
+        else:
+            used = used_tokens(result)
+            if used is not None:
+                limiter.reconcile(reserved, used)
+            return result

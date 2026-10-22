@@ -10,6 +10,11 @@ SESSION_DIR.mkdir(exist_ok=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GROQ_MODEL = "openai/gpt-oss-120b"
+# Provider limits per model: (requests per minute, tokens per minute). Groq free tier.
+RATE_LIMITS = {
+    "openai/gpt-oss-120b": (30, 8_000),
+    "default": (30, 6_000),
+}
 
 KNOWLEDGE_DIR = BASE_DIR / "src" / "knowledge" / "cities"
 

@@ -1,9 +1,12 @@
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from typing import Any, Callable
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from src.agents.nodes.persona_builder import build_persona_from_result, run_persona_turn
+from src.api.deps import get_llm_factory
 from src.config import SUPPORTED_CITIES
 from src.services.session import save_session
 
@@ -30,7 +33,7 @@ class PersonaTurnResponse(BaseModel):
 
 
 @router.post("/persona/turn", response_model=PersonaTurnResponse)
-async def persona_turn(req: PersonaTurnRequest):
+async def persona_turn(req: PersonaTurnRequest, llm_factory: Callable[..., Any] = Depends(get_llm_factory)):
     if req.destination.lower() not in SUPPORTED_CITIES:
         raise HTTPException(
             400,
@@ -42,6 +45,7 @@ async def persona_turn(req: PersonaTurnRequest):
         trip_days=req.trip_days,
         conversation_history=req.conversation_history,
         user_message=req.user_message,
+        llm_factory=llm_factory,
     )
 
     response = PersonaTurnResponse(session_id=session_id)

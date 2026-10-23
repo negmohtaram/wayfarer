@@ -1,5 +1,7 @@
 import json
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator, Callable, Optional
+
+from src.agents.context import LLMContext
 
 from src.agents.graph import planning_graph
 from src.agents.replan_graph import replan_graph
@@ -13,7 +15,9 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
-async def stream_planning(session_id: str, persona: TravelerPersona) -> AsyncGenerator[str, None]:
+async def stream_planning(
+    session_id: str, persona: TravelerPersona, llm_factory: Optional[Callable[..., Any]] = None,
+) -> AsyncGenerator[str, None]:
     yield _sse("start", {"message": "Starting WAYFARER planning pipeline...", "session_id": session_id})
 
     state: PlanningState = {
@@ -26,7 +30,7 @@ async def stream_planning(session_id: str, persona: TravelerPersona) -> AsyncGen
     try:
         log_seen: set[str] = set()
 
-        async for chunk in planning_graph.astream(state):
+        async for chunk in planning_graph.astream(state, context=LLMContext(llm_factory)):
             node_name = list(chunk.keys())[0] if chunk else None
             node_state = chunk.get(node_name, {}) if node_name else {}
 
@@ -71,6 +75,7 @@ async def stream_replanning(
     session_id: str,
     disruption: str,
     completed: list[int],
+    llm_factory: Optional[Callable[..., Any]] = None,
 ) -> AsyncGenerator[str, None]:
     yield _sse("start", {"message": f"Replanning: {disruption}"})
 
@@ -88,7 +93,7 @@ async def stream_replanning(
             "log": [],
         }
 
-        async for chunk in replan_graph.astream(state):
+        async for chunk in replan_graph.astream(state, context=LLMContext(llm_factory)):
             node_name = list(chunk.keys())[0] if chunk else None
             node_state = chunk.get(node_name, {}) if node_name else {}
 

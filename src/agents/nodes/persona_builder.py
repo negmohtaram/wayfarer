@@ -1,3 +1,4 @@
+from typing import Any, Callable, Optional
 import json
 import re
 from src.agents.llm import call_with_retry, get_llm
@@ -74,12 +75,13 @@ async def run_persona_turn(
     trip_days: int,
     conversation_history: list[dict],
     user_message: str,
+    llm_factory: Optional[Callable[..., Any]] = None,
 ) -> dict:
     """
     Run one turn of the persona-building conversation.
     Returns either a question or the completed persona JSON.
     """
-    llm = get_llm(temperature=0.8)
+    llm = (llm_factory or get_llm)(temperature=0.8)
 
     messages = [{"role": "system", "content": PERSONA_SYSTEM}]
 

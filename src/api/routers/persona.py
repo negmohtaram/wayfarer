@@ -1,26 +1,14 @@
 import uuid
-from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from src.agents.nodes.persona_builder import build_persona_from_result, run_persona_turn
 from src.config import SUPPORTED_CITIES
-from src.models.persona import TravelerPersona
-from src.services.planning import stream_planning, stream_replanning
-from src.services.session import load_session, save_session
+from src.services.session import save_session
 
-router = APIRouter()
+router = APIRouter(tags=["persona"])
 
-SSE_HEADERS = {
-    "Cache-Control": "no-cache",
-    "X-Accel-Buffering": "no",
-    "Connection": "keep-alive",
-}
-
-
-# --- Request / Response models ---
 
 class PersonaTurnRequest(BaseModel):
     destination: str
@@ -40,20 +28,6 @@ class PersonaTurnResponse(BaseModel):
     persona_narrative: str = ""
     persona_tags: list[str] = []
 
-
-class PlanRequest(BaseModel):
-    session_id: str
-    persona: dict
-    stream: bool = True
-
-
-class ReplanRequest(BaseModel):
-    session_id: str
-    disruption: str
-    completed_day_indices: list[int] = []
-
-
-# --- Routes ---
 
 @router.post("/persona/turn", response_model=PersonaTurnResponse)
 async def persona_turn(req: PersonaTurnRequest):
@@ -89,52 +63,3 @@ async def persona_turn(req: PersonaTurnRequest):
         response.hint = result.get("hint", "")
 
     return response
-
-
-@router.post("/plan")
-async def start_planning(req: PlanRequest):
-    if not req.session_id:
-        raise HTTPException(400, "session_id required")
-    try:
-        persona = TravelerPersona(**req.persona)
-    except Exception as e:
-        raise HTTPException(400, f"Invalid persona: {e}")
-
-    return StreamingResponse(
-        stream_planning(req.session_id, persona),
-        media_type="text/event-stream",
-        headers=SSE_HEADERS,
-    )
-
-
-@router.post("/replan")
-async def replan(req: ReplanRequest):
-    return StreamingResponse(
-        stream_replanning(req.session_id, req.disruption, req.completed_day_indices),
-        media_type="text/event-stream",
-        headers=SSE_HEADERS,
-    )
-
-
-@router.get("/itinerary/{session_id}")
-async def get_itinerary(session_id: str):
-    return await load_session(session_id)
-
-
-@router.get("/highlights/{session_id}")
-async def get_highlight_rankings(session_id: str):
-    data = await load_session(session_id)
-    return {
-        "session_id": session_id,
-        "rankings": data.get("itinerary", {}).get("highlight_rankings", []),
-    }
-
-
-@router.get("/cities")
-async def list_cities():
-    return {"cities": SUPPORTED_CITIES}
-
-
-@router.get("/health")
-async def health():
-    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}

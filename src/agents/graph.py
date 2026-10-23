@@ -1,4 +1,5 @@
 from langgraph.graph import StateGraph, START, END
+from src.agents.context import LLMContext
 from src.agents.state import PlanningState
 from src.agents.nodes.experience_generator import experience_generator_node
 from src.agents.nodes.optimizer import optimizer_node
@@ -9,7 +10,7 @@ from src.agents.nodes.highlight_ranker import highlight_ranker_node
 
 
 def build_planning_graph():
-    graph = StateGraph(PlanningState)
+    graph = StateGraph(PlanningState, context_schema=LLMContext)
 
     graph.add_node("experience_generator", experience_generator_node)
     graph.add_node("optimizer", optimizer_node)

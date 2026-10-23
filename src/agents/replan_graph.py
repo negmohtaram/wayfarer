@@ -4,6 +4,9 @@ from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
+from langgraph.runtime import Runtime
+
+from src.agents.context import LLMContext, llm_factory_from
 from pydantic import BaseModel, Field
 
 from src.agents.state import ReplanningState
@@ -18,7 +21,7 @@ class DisruptionAnalysis(BaseModel):
     recommendation: str = ""
 
 
-async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
+async def disruption_analyzer_node(state: ReplanningState, runtime: Runtime[LLMContext]) -> ReplanningState:
     """Classify the disruption using structured LLM output.
 
     Uses with_structured_output so the LLM is forced to return a valid
@@ -62,7 +65,7 @@ async def disruption_analyzer_node(state: ReplanningState) -> ReplanningState:
     ]
 
     try:
-        llm = get_llm(temperature=0.3).with_structured_output(DisruptionAnalysis)
+        llm = (llm_factory_from(runtime) or get_llm)(temperature=0.3).with_structured_output(DisruptionAnalysis)
         result: DisruptionAnalysis = await call_with_retry(
             llm.ainvoke, messages,
             meta={"site": "disruption_analyzer", "model": GROQ_MODEL, "temperature": 0.3,
@@ -238,7 +241,7 @@ async def replan_validator_node(state: ReplanningState) -> ReplanningState:
 
 
 def build_replan_graph():
-    graph = StateGraph(ReplanningState)
+    graph = StateGraph(ReplanningState, context_schema=LLMContext)
 
     graph.add_node("disruption_analyzer", disruption_analyzer_node)
     graph.add_node("replan_assembler", replan_assembler_node)

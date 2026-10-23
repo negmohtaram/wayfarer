@@ -1,3 +1,4 @@
+from typing import Any, Callable, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.agents.llm import call_with_retry, get_llm
@@ -6,7 +7,7 @@ from src.config import GROQ_MODEL
 from src.models.itinerary import CritiqueResult, Itinerary
 
 
-async def experience_critic(itinerary: Itinerary) -> CritiqueResult:
+async def experience_critic(itinerary: Itinerary, llm_factory: Optional[Callable[..., Any]] = None) -> CritiqueResult:
     """Evaluate experience quality and narrative arc using LLM judgment.
 
     Why LLM here instead of rules?
@@ -54,7 +55,7 @@ Score 0-10. Verdict must be "approve" (score>=7), "revise" (4-7), or "reject_day
 List specific issues and concrete suggestions. affected_days should be day numbers with problems."""
 
     try:
-        llm = get_llm(temperature=0.3).with_structured_output(CritiqueResult)
+        llm = (llm_factory or get_llm)(temperature=0.3).with_structured_output(CritiqueResult)
         messages = [
             SystemMessage("You are a precise travel itinerary critic. Return structured evaluations."),
             HumanMessage(prompt),

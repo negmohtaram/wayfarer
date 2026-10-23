@@ -131,8 +131,8 @@ def test_replay_needs_no_api_key(tmp_path, monkeypatch):
 def test_client_is_built_on_the_first_call(monkeypatch):
     monkeypatch.setattr(llm_module, "GROQ_API_KEY", "")
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    model = llm_module.get_llm(temperature=0.3).with_structured_output(CritiqueResult)
-    with pytest.raises(Exception):
+    model = llm_module.get_llm(temperature=0.3).with_structured_output(CritiqueResult)   # nothing built yet
+    with pytest.raises(RuntimeError, match="real Groq client built"):   # built here, on the first call
         asyncio.run(model.ainvoke([]))
 
 

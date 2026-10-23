@@ -1,6 +1,6 @@
 import pytest
 
-from src.agents import ratelimit
+from src.agents import llm, ratelimit
 
 
 class _LimiterClock:
@@ -23,3 +23,11 @@ def fresh_rate_limiters(monkeypatch):
     ratelimit.reset()
     yield
     ratelimit.reset()
+
+
+@pytest.fixture(autouse=True)
+def no_real_groq(monkeypatch):
+    """Fail any test that builds a real Groq client, so a missed fake can't reach the network."""
+    def refuse(*args, **kwargs):
+        raise RuntimeError("real Groq client built inside a test")
+    monkeypatch.setattr(llm, "ChatGroq", refuse)

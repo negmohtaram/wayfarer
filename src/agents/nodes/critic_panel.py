@@ -1,5 +1,10 @@
 import asyncio
 import logging
+from functools import partial
+
+from langgraph.runtime import Runtime
+
+from src.agents.context import LLMContext, llm_factory_from
 from src.agents.state import PlanningState
 from src.agents.nodes.critics.logistics import logistics_critic
 from src.agents.nodes.critics.experience import experience_critic
@@ -18,9 +23,10 @@ _CRITICS = [
     ("budget", budget_critic),
     ("authenticity", authenticity_critic),
 ]
+_LLM_CRITICS = {"experience"}   # critics that call a model and take the run's factory
 
 
-async def critic_panel_node(state: PlanningState) -> PlanningState:
+async def critic_panel_node(state: PlanningState, runtime: Runtime[LLMContext]) -> PlanningState:
     """Run all 5 critics in parallel and collect results."""
     state.setdefault("log", [])
     state["log"].append("🔍 Running critic panel...")
@@ -31,8 +37,10 @@ async def critic_panel_node(state: PlanningState) -> PlanningState:
         return state
 
     # Run all 5 critics in parallel
+    factory = llm_factory_from(runtime)
+    critics = [partial(fn, llm_factory=factory) if name in _LLM_CRITICS else fn for name, fn in _CRITICS]
     results = await asyncio.gather(
-        *[fn(itinerary) for _, fn in _CRITICS],
+        *[fn(itinerary) for fn in critics],
         return_exceptions=True,
     )
 

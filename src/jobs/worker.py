@@ -1,0 +1,73 @@
+import asyncio
+import contextlib
+import logging
+from typing import Any, Callable
+
+from src.agents.context import LLMContext
+from src.agents.graph import planning_graph
+from src.jobs.models import Job
+from src.models.persona import TravelerPersona
+from src.services.session import save_session
+
+log = logging.getLogger(__name__)
+
+
+async def run_plan_job(job: Job, llm_factory: Callable[..., Any]) -> str:
+    """Run the planning graph for one job, save the plan, return its id."""
+    persona = TravelerPersona(**job.payload["persona"])
+    state = {"session_id": job.job_id, "persona": persona, "log": [], "revision_count": 0}
+    final = await planning_graph.ainvoke(state, context=LLMContext(llm_factory))
+    itinerary = final.get("itinerary")
+    if itinerary is None:
+        raise RuntimeError("planning finished without an itinerary")
+    plan_id = f"plan-{job.job_id}"     # same job, same plan: a rerun overwrites instead of leaving an orphan
+    await save_session(plan_id, {
+        "plan_id": plan_id,
+        "version": 1,
+        "job_id": job.job_id,
+        "persona": persona.model_dump(mode="json"),
+        "itinerary": itinerary.model_dump(mode="json"),
+    })
+    return plan_id
+
+
+class Worker:
+    """One in-process worker: claims jobs, keeps their heartbeat fresh, records the result."""
+
+    def __init__(self, store, llm_factory: Callable[..., Any], *, poll_s: float = 0.2,
+                 heartbeat_s: float = 10.0, stale_after: float = 60.0, max_attempts: int = 3,
+                 runner: Callable[[Job, Callable[..., Any]], Any] = run_plan_job):
+        self.store, self.llm_factory, self.runner = store, llm_factory, runner
+        self.poll_s, self.heartbeat_s = poll_s, heartbeat_s
+        self.stale_after, self.max_attempts = stale_after, max_attempts
+        self.wake = asyncio.Event()
+
+    async def run_forever(self) -> None:
+        while True:
+            await self.store.requeue_stale(self.stale_after, self.max_attempts)
+            job = await self.store.claim_next()
+            if job is None:
+                self.wake.clear()
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(self.wake.wait(), self.poll_s)
+                continue
+            await self.run_one(job)
+
+    async def run_one(self, job: Job) -> None:
+        beat = asyncio.create_task(self._beat(job.job_id))
+        try:
+            plan_id = await self.runner(job, self.llm_factory)
+        except asyncio.CancelledError:
+            raise       # shutdown: the job stays running and the next start requeues it
+        except Exception as e:
+            log.warning("job %s failed: %s", job.job_id, e)
+            await self.store.fail(job.job_id, f"{type(e).__name__}: {e}"[:300])
+        else:
+            await self.store.finish(job.job_id, plan_id)
+        finally:
+            beat.cancel()
+
+    async def _beat(self, job_id: str) -> None:
+        while True:
+            await asyncio.sleep(self.heartbeat_s)
+            await self.store.heartbeat(job_id)

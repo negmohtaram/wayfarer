@@ -2,7 +2,7 @@
 
 python -m src.evaluation.chat_throughput
 
-No network. A fake provider enforces 30 requests and 8,000 tokens in any rolling minute and
+No network. A fake provider enforces the limits in RATE_LIMITS over any rolling minute and
 answers 429 with Retry-After when a call would cross either. Each call uses the real messages
 and the real token usage from the Lisbon recordings, and takes a model time from the lognormal
 fitted to real Groq calls. Time runs faster than real time by SCALE.

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from src.agents.llm import get_llm
-from src.api.routers import itineraries, jobs, meta, persona, planning
+from src.api.routers import chat, itineraries, jobs, meta, persona, planning
 from src.config import GROQ_API_KEY
 from src.jobs.store import InMemoryJobStore
 from src.jobs.worker import Worker
@@ -45,7 +45,7 @@ def create_app(llm_factory: Callable[..., Any] = get_llm, require_key: bool = Tr
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (persona, planning, jobs, itineraries, meta):
+    for module in (persona, planning, jobs, chat, itineraries, meta):
         app.include_router(module.router, prefix="/api")
 
     @app.get("/")

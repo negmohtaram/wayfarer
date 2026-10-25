@@ -63,21 +63,27 @@ async def handle_turn_sequential(text: str, session_id: str, steps: TurnSteps) -
 
 
 class TurnRunner:
-    """Runs one chat turn at a time for one session.
+    """Runs one chat turn at a time for one session and merges messages that arrive mid-turn.
 
-    A new message makes the turn still running stale: it is cancelled and awaited before the
-    new turn starts, so two turns never run at once. Only the newest turn's result is
-    delivered; the turn number guards against a step that finishes despite the cancel.
-    Nothing is written to the trip inside a turn, so a cancelled turn leaves nothing to undo.
+    A new message makes the running turn stale: it is cancelled and awaited, then the turn reruns
+    on all messages not yet answered, joined in order, so "move the museum to day 2" followed by
+    "and put it in the morning" becomes one turn instead of losing the first. A short debounce
+    lets a quick burst start as one turn. Only the newest turn's result is delivered; the turn
+    number guards against a step that finishes despite the cancel. Nothing is written to the
+    trip inside a turn, so a cancelled turn leaves nothing to undo.
     """
 
+    MAX_MERGED = 5      # older unanswered messages drop off; the newest ones carry the intent
+
     def __init__(self, session_id: str, steps: TurnSteps,
-                 deliver: Callable[[str, TurnResult], Awaitable[None]]):
+                 deliver: Callable[[str, TurnResult], Awaitable[None]], debounce_s: float = 1.0):
         self.session_id = session_id
         self.steps = steps
         self.deliver = deliver
+        self.debounce_s = debounce_s
         self._task: Optional[asyncio.Task] = None
         self._latest = 0
+        self._pending: list[str] = []
 
     async def submit(self, text: str) -> asyncio.Task:
         if self._task is not None and not self._task.done():
@@ -86,12 +92,16 @@ class TurnRunner:
                 await self._task
             except asyncio.CancelledError:
                 pass
+        self._pending = (self._pending + [text])[-self.MAX_MERGED:]
         self._latest += 1
-        self._task = asyncio.create_task(self._run(text, self._latest))
+        self._task = asyncio.create_task(self._run("\n".join(self._pending), self._latest))
         return self._task
 
     async def _run(self, text: str, turn: int) -> TurnResult:
+        if self.debounce_s:
+            await asyncio.sleep(self.debounce_s)
         result = await handle_turn(text, self.session_id, self.steps)
         if turn == self._latest:
+            self._pending = []
             await self.deliver(text, result)
         return result

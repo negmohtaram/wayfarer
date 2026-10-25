@@ -86,7 +86,7 @@ def test_new_message_cancels_the_running_turn():
         delivered.append(text)
 
     async def scenario():
-        runner = TurnRunner("s", steps, deliver)
+        runner = TurnRunner("s", steps, deliver, debounce_s=0)
         a = await runner.submit("A")
         await started.wait()
         b = await runner.submit("B")     # When: B arrives while A is still running
@@ -96,7 +96,7 @@ def test_new_message_cancels_the_running_turn():
     a, b = asyncio.run(scenario())
     # Then
     assert a.cancelled() and cancelled == ["A"]     # A stopped, it did not keep running
-    assert delivered == ["B"]                       # A's result is never delivered
+    assert delivered == ["A\nB"]                    # A's result is never delivered; A is merged into B's turn
     assert b.result().change == {"setting": "budget"}
     assert extract_calls.count("A") == 1            # cancellation is never retried
 
@@ -111,9 +111,52 @@ def test_a_stale_turn_that_finishes_anyway_is_not_delivered():
         delivered.append(text)
 
     async def scenario():
-        runner = TurnRunner("s", steps, deliver)
+        runner = TurnRunner("s", steps, deliver, debounce_s=0)
         runner._latest = 5                           # a newer message already arrived
         await runner._run("old", 4)
 
     asyncio.run(scenario())
     assert delivered == []
+
+
+def test_messages_merge_until_a_result_is_delivered():
+    route = Route(intent=Intent.CHANGE_SETTING, day=2)
+    seen = []
+    steps = make_steps(route, [])
+
+    async def extract(text, route, trip):
+        seen.append(text)
+        return {"text": text}
+
+    async def route_step(text, trip_days):
+        return route
+
+    steps.extract, steps.route = extract, route_step
+    delivered = []
+
+    async def deliver(text, result):
+        delivered.append(text)
+
+    async def scenario():
+        runner = TurnRunner("s", steps, deliver, debounce_s=0.05)
+        await runner.submit("move the museum to day 2")
+        await asyncio.sleep(0.01)                       # inside the debounce: no model call yet
+        await (await runner.submit("and put it in the morning"))
+        await (await runner.submit("thanks"))           # after delivery: a fresh turn
+
+    asyncio.run(scenario())
+    assert delivered == ["move the museum to day 2\nand put it in the morning", "thanks"]
+    assert seen == delivered                            # the debounced first turn never called the model
+
+
+def test_only_the_newest_messages_are_merged():
+    steps = make_steps(Route(intent=Intent.FEEDBACK), [])
+
+    async def scenario():
+        runner = TurnRunner("s", steps, lambda t, r: asyncio.sleep(0), debounce_s=10)
+        for i in range(7):
+            await runner.submit(f"m{i}")
+        runner._task.cancel()
+        return runner._pending
+
+    assert asyncio.run(scenario()) == ["m2", "m3", "m4", "m5", "m6"]

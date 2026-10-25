@@ -35,7 +35,7 @@ def client(tmp_path, monkeypatch):
 
     monkeypatch.setattr(assembler, "_fetch_weather_live", no_weather)
     calls: list = []
-    app = main.create_app(lambda temperature=0.7: FakeModel(calls), require_key=False)
+    app = main.create_app(lambda temperature=0.7: FakeModel(calls), require_key=False, database_url="")
     with TestClient(app) as c:
         c.calls = calls
         yield c

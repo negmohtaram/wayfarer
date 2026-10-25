@@ -13,6 +13,7 @@ class InMemoryJobStore:
         self._clock = clock
         self._jobs: dict[str, Job] = {}
         self._by_key: dict[str, str] = {}
+        self._plans: dict[str, dict] = {}
         self._lock = asyncio.Lock()
 
     async def create(self, kind: str, payload: dict[str, Any], idempotency_key: Optional[str] = None) -> tuple[Job, bool]:
@@ -47,9 +48,15 @@ class InMemoryJobStore:
         if job.status is JobStatus.RUNNING:
             job.heartbeat_at = self._clock()
 
-    async def finish(self, job_id: str, plan_id: str) -> None:
-        job = self._jobs[job_id]
-        job.status, job.plan_id, job.finished_at = JobStatus.DONE, plan_id, self._clock()
+    async def finish(self, job_id: str, plan: dict) -> None:
+        """Save the plan and mark the job done together (one transaction in Postgres)."""
+        async with self._lock:
+            self._plans[plan["plan_id"]] = plan
+            job = self._jobs[job_id]
+            job.status, job.plan_id, job.finished_at = JobStatus.DONE, plan["plan_id"], self._clock()
+
+    async def get_plan(self, plan_id: str) -> Optional[dict]:
+        return self._plans.get(plan_id)
 
     async def fail(self, job_id: str, reason: str) -> None:
         job = self._jobs[job_id]

@@ -9,6 +9,8 @@ SESSION_DIR = Path(os.getenv("SESSION_DIR", "./sessions"))
 SESSION_DIR.mkdir(exist_ok=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+# postgresql+asyncpg://user:password@host:5432/db. Empty: jobs and plans stay in memory.
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 GROQ_MODEL = "openai/gpt-oss-120b"
 # Provider limits per model: (requests per minute, tokens per minute). Groq free tier.
 RATE_LIMITS = {

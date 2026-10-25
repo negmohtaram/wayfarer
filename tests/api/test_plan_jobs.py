@@ -112,11 +112,8 @@ def test_heartbeat_keeps_a_slow_job_alive():
     assert asyncio.run(go()).status is JobStatus.RUNNING
 
 
-def test_rerun_of_the_same_job_overwrites_its_plan(tmp_path, monkeypatch):
+def test_rerun_of_the_same_job_overwrites_its_plan(monkeypatch):
     from src.jobs import worker as worker_mod
-    from src.services import session
-
-    monkeypatch.setattr(session, "SESSION_DIR", tmp_path)
 
     class Final:
         def model_dump(self, **kw):
@@ -130,10 +127,11 @@ def test_rerun_of_the_same_job_overwrites_its_plan(tmp_path, monkeypatch):
     async def go():
         store = InMemoryJobStore()
         job, _ = await store.create("plan", {"persona": PERSONA.model_dump(mode="json")})
-        first = await worker_mod.run_plan_job(job, None)     # worker dies after this, before finish()
-        second = await worker_mod.run_plan_job(job, None)    # requeued run
-        return first, second
+        first = await worker_mod.run_plan_job(job, None)      # worker dies after this, before finish()
+        second = await worker_mod.run_plan_job(job, None)     # requeued run
+        await store.finish(job.job_id, second)
+        return first, second, store
 
-    first, second = asyncio.run(go())
-    assert first == second
-    assert len(list(tmp_path.glob("*.json"))) == 1
+    first, second, store = asyncio.run(go())
+    assert first["plan_id"] == second["plan_id"]
+    assert len(store._plans) == 1

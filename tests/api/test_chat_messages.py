@@ -1,13 +1,10 @@
 """POST /api/trips/{id}/messages: route, extract a list of changes, build the card in code."""
 
-import asyncio
-
 from langchain_core.messages import AIMessage
 
 from src.chat.card import build_card
 from src.chat.extract import Change, ChangeList, Op, Slot
 from src.chat.router import DayRef, Intent
-from src.services import session
 
 
 def plan(days):
@@ -41,9 +38,8 @@ class ChatModel:
         return AIMessage(content="", tool_calls=[{"name": "route_message", "args": {"intent": "change_setting"}, "id": "c1"}])
 
 
-def test_message_returns_intent_and_a_filled_card(client, tmp_path, monkeypatch):
-    monkeypatch.setattr(session, "SESSION_DIR", tmp_path)
-    asyncio.run(session.save_session("p1", PLAN))
+def test_message_returns_intent_and_a_filled_card(client):
+    client.app.state.jobs._plans["p1"] = PLAN
     model = ChatModel([Change(op=Op.MOVE, item="the Rijksmuseum", to_day=2, slot=Slot.MORNING)])
     client.app.state.llm_factory = lambda temperature=0.7: model
 
@@ -84,3 +80,7 @@ def test_several_changes_and_positions_are_resolved_by_code():
 def test_a_day_past_the_trip_is_a_check_not_a_crash():
     card = build_card(Intent.CHANGE_SETTING, [Change(op=Op.MOVE, item="Vondelpark", to_day=7)], PLAN)
     assert "there is no day 7" in card.checks[0]
+
+
+def test_unknown_plan_is_404(client):
+    assert client.post("/api/trips/nope/messages", json={"text": "hi"}).status_code == 404

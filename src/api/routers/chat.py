@@ -1,6 +1,6 @@
 from typing import Any, Callable, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from src.api.deps import get_llm_factory
@@ -8,7 +8,6 @@ from src.chat.card import ProposalCard, build_card
 from src.chat.extract import extract_changes
 from src.chat.handler import NEEDS_CHANGE, TurnSteps, handle_turn
 from src.chat.router import Intent, route_message
-from src.services.session import load_session
 
 router = APIRouter(tags=["chat"])
 
@@ -23,9 +22,12 @@ class MessageOut(BaseModel):
     card: Optional[ProposalCard] = None
 
 
-def turn_steps(llm_factory: Callable[..., Any], loaded: dict) -> TurnSteps:
+def turn_steps(llm_factory: Callable[..., Any], store: Any, loaded: dict) -> TurnSteps:
     async def load(plan_id):
-        plan = loaded["plan"] = await load_session(plan_id)
+        plan = await store.get_plan(plan_id)
+        if plan is None:
+            raise HTTPException(404, f"Plan {plan_id} not found")
+        loaded["plan"] = plan
         it = plan["itinerary"]
         return {"trip_days": len(it["days"]), "destination": it["destination"], "plan": plan}
 
@@ -45,9 +47,10 @@ def turn_steps(llm_factory: Callable[..., Any], loaded: dict) -> TurnSteps:
 
 
 @router.post("/trips/{plan_id}/messages", response_model=MessageOut)
-async def post_message(plan_id: str, msg: MessageIn, llm_factory: Callable[..., Any] = Depends(get_llm_factory)):
+async def post_message(plan_id: str, msg: MessageIn, request: Request,
+                       llm_factory: Callable[..., Any] = Depends(get_llm_factory)):
     loaded: dict = {}
-    result = await handle_turn(msg.text, plan_id, turn_steps(llm_factory, loaded))
+    result = await handle_turn(msg.text, plan_id, turn_steps(llm_factory, request.app.state.jobs, loaded))
     card = None
     if result.route.intent in NEEDS_CHANGE and result.change is not None:
         card = build_card(result.route.intent, result.change, loaded["plan"])

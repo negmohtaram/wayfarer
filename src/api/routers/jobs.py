@@ -4,7 +4,6 @@ from fastapi import APIRouter, Header, HTTPException, Request, Response
 
 from src.jobs.models import JobAccepted, JobView, PlanJobRequest
 from src.models.persona import TravelerPersona
-from src.services.session import load_session
 
 router = APIRouter(tags=["jobs"])
 
@@ -32,5 +31,8 @@ async def get_job(job_id: str, request: Request):
 
 
 @router.get("/plans/{plan_id}")
-async def get_plan(plan_id: str):
-    return await load_session(plan_id)
+async def get_plan(plan_id: str, request: Request):
+    plan = await request.app.state.jobs.get_plan(plan_id)
+    if plan is None:
+        raise HTTPException(404, f"Plan {plan_id} not found")
+    return plan

@@ -7,28 +7,25 @@ from src.agents.context import LLMContext
 from src.agents.graph import planning_graph
 from src.jobs.models import Job
 from src.models.persona import TravelerPersona
-from src.services.session import save_session
 
 log = logging.getLogger(__name__)
 
 
-async def run_plan_job(job: Job, llm_factory: Callable[..., Any]) -> str:
-    """Run the planning graph for one job, save the plan, return its id."""
+async def run_plan_job(job: Job, llm_factory: Callable[..., Any]) -> dict:
+    """Run the planning graph for one job and return the plan. The store saves it."""
     persona = TravelerPersona(**job.payload["persona"])
     state = {"session_id": job.job_id, "persona": persona, "log": [], "revision_count": 0}
     final = await planning_graph.ainvoke(state, context=LLMContext(llm_factory))
     itinerary = final.get("itinerary")
     if itinerary is None:
         raise RuntimeError("planning finished without an itinerary")
-    plan_id = f"plan-{job.job_id}"     # same job, same plan: a rerun overwrites instead of leaving an orphan
-    await save_session(plan_id, {
-        "plan_id": plan_id,
+    return {
+        "plan_id": f"plan-{job.job_id}",     # same job, same plan: a rerun overwrites instead of leaving an orphan
         "version": 1,
         "job_id": job.job_id,
         "persona": persona.model_dump(mode="json"),
         "itinerary": itinerary.model_dump(mode="json"),
-    })
-    return plan_id
+    }
 
 
 class Worker:
@@ -56,14 +53,14 @@ class Worker:
     async def run_one(self, job: Job) -> None:
         beat = asyncio.create_task(self._beat(job.job_id))
         try:
-            plan_id = await self.runner(job, self.llm_factory)
+            plan = await self.runner(job, self.llm_factory)
         except asyncio.CancelledError:
             raise       # shutdown: the job stays running and the next start requeues it
         except Exception as e:
             log.warning("job %s failed: %s", job.job_id, e)
             await self.store.fail(job.job_id, f"{type(e).__name__}: {e}"[:300])
         else:
-            await self.store.finish(job.job_id, plan_id)
+            await self.store.finish(job.job_id, plan)
         finally:
             beat.cancel()
 

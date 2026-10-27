@@ -2,6 +2,8 @@ from src.agents.state import PlanningState
 from src.models.persona import TravelerPersona
 from src.optimization.route import cluster_by_day, optimize_route
 from src.knowledge.rag import get_city_coordinates
+from src.config import PLANNER
+from src.planning.planner_v2a import plan_v2a
 
 
 def _experiences_per_day(persona: TravelerPersona) -> int:
@@ -34,6 +36,21 @@ async def optimizer_node(state: PlanningState) -> PlanningState:
 
     days = persona.trip_days
     per_day = _experiences_per_day(persona)
+
+    if state.get("planner", PLANNER) == "v2a":
+        result = plan_v2a(state.get("feasible") or pool, persona, per_day)
+        state["planner_trace"] = {
+            "planner": "v2a", "status": result.status, "score": round(result.score, 4),
+            "moves_tried": result.moves_tried, "moves_kept": result.moves_kept,
+            "stopped_by": result.stopped_by, "shortfall": result.shortfall, "reason": result.reason,
+        }
+        if result.status != "feasible":
+            state["error"] = f"No plan: {result.reason}"
+            return state
+        state["optimized_days"] = result.days
+        state["log"].append(f"📐 Planner v2a: {days} days, {result.moves_kept} improving moves")
+        return state
+
     needed = days * per_day
 
     candidates = pool

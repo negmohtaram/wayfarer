@@ -1,6 +1,11 @@
+import asyncio
+import os
+
 import pytest
 
 from src.agents import llm, ratelimit
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "")
 
 
 class _LimiterClock:
@@ -31,3 +36,21 @@ def no_real_groq(monkeypatch):
     def refuse(*args, **kwargs):
         raise RuntimeError("real Groq client built inside a test")
     monkeypatch.setattr(llm, "ChatGroq", refuse)
+
+
+@pytest.fixture
+def fresh_pg():
+    """A real Postgres with empty tables for this test only. Skips when TEST_DATABASE_URL is not set."""
+    if not TEST_DATABASE_URL:
+        pytest.skip("TEST_DATABASE_URL not set")
+    from src.jobs.pg_store import PostgresJobStore
+    from src.storage.tables import metadata
+
+    async def reset():
+        store = PostgresJobStore(TEST_DATABASE_URL)
+        async with store.engine.begin() as conn:
+            await conn.run_sync(metadata.drop_all)
+            await conn.run_sync(metadata.create_all)
+        await store.close()
+    asyncio.run(reset())
+    return TEST_DATABASE_URL

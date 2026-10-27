@@ -9,7 +9,7 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from src.jobs.models import Job
+from src.jobs.models import IdempotencyKeyReused, Job
 
 COLUMNS = ("job_id, kind, status, payload, idempotency_key, attempts, reason, plan_id, "
            "created_at, started_at, heartbeat_at, finished_at")
@@ -41,7 +41,8 @@ class PostgresJobStore:
         await self.engine.dispose()
 
     async def create(self, kind: str, payload: dict, idempotency_key: Optional[str] = None) -> tuple[Job, bool]:
-        """A repeated idempotency key hits the UNIQUE constraint: nothing is inserted and the first job comes back."""
+        """A repeated idempotency key hits the UNIQUE constraint: nothing is inserted and the first job comes back,
+        unless the first job was a different request (IdempotencyKeyReused)."""
         async with self.engine.begin() as conn:
             row = (await conn.execute(text(f"""
                 INSERT INTO jobs (job_id, kind, payload, idempotency_key)
@@ -54,7 +55,10 @@ class PostgresJobStore:
                 return _job(row), True
             row = (await conn.execute(text(f"SELECT {COLUMNS} FROM jobs WHERE idempotency_key = :key"),
                                       {"key": idempotency_key})).one()
-            return _job(row), False
+            first = _job(row)
+            if (first.kind, first.payload) != (kind, payload):     # JSONB ignores key order, dict == does too
+                raise IdempotencyKeyReused(idempotency_key)
+            return first, False
 
     async def get(self, job_id: str) -> Optional[Job]:
         if not _is_uuid(job_id):

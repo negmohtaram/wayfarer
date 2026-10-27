@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff==0.15.20", "mypy", "pytest>=8"]
+dev = ["ruff==0.15.20", "mypy", "pytest>=8", "pytest-randomly"]
 
 [tool.setuptools.packages.find]
 where = ["."]

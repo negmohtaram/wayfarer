@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
-from src.jobs.models import JobAccepted, JobView, PlanJobRequest
+from src.jobs.models import IdempotencyKeyReused, JobAccepted, JobView, PlanJobRequest
 from src.models.persona import TravelerPersona
 
 router = APIRouter(tags=["jobs"])
@@ -15,7 +15,12 @@ async def create_plan_job(req: PlanJobRequest, request: Request, response: Respo
         TravelerPersona(**req.persona)          # bad input is rejected now, not inside the job
     except Exception as e:
         raise HTTPException(422, f"Invalid persona: {e}")
-    job, created = await request.app.state.jobs.create("plan", req.model_dump(), idempotency_key)
+    try:
+        job, created = await request.app.state.jobs.create("plan", req.model_dump(), idempotency_key)
+    except IdempotencyKeyReused:
+        # 422, as in the IETF Idempotency-Key draft; the type tells it apart from an invalid persona.
+        raise HTTPException(422, {"type": "idempotency_key_reused",
+                                  "message": f"Idempotency-Key {idempotency_key} was already used with a different request"})
     if created:
         request.app.state.worker.wake.set()
     response.headers["Location"] = f"/api/jobs/{job.job_id}"

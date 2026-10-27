@@ -107,6 +107,7 @@ async def experience_generator_node(state: PlanningState) -> PlanningState:
         exp.persona_score = score_experience(exp, persona)
         scored.append(exp)
     scored.sort(key=lambda e: e.persona_score or 0, reverse=True)
+    state["feasible"] = list(scored)        # planner v2a searches all of them
 
     # Ensure variety across types
     experience_pool = _ensure_variety(scored, persona)

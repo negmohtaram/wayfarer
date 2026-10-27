@@ -1,9 +1,12 @@
 import math
+from functools import lru_cache
 from src.models.experience import Experience
 
 
+@lru_cache(maxsize=65536)
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Returns distance in kilometers between two lat/lng points."""
+    """Returns distance in kilometers between two lat/lng points. Cached: the planner asks for the
+    same pairs thousands of times."""
     R = 6371.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)

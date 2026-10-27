@@ -5,8 +5,8 @@ from src.knowledge.rag import get_city_coordinates
 from src.models.experience import Experience, ScheduledExperience
 from src.models.itinerary import Itinerary, DayPlan, WeatherForecast
 from src.models.persona import TravelerPersona
-from src.optimization.route import haversine, travel_time_minutes
-from src.optimization.energy import minutes_to_time, get_day_start_time
+from src.optimization.energy import minutes_to_time
+from src.planning.timing import time_day
 
 
 ARC_LABELS = {
@@ -117,15 +117,6 @@ def _get_arc_for_day(day_num: int, total_days: int) -> tuple[str, str]:
     return ARC_LABELS.get(day_num, ARC_LABELS[2])
 
 
-TIME_OF_DAY_WINDOWS = {
-    "early_morning": (6 * 60, 8 * 60),
-    "morning": (8 * 60, 12 * 60),
-    "afternoon": (12 * 60, 17 * 60),
-    "golden_hour": (17 * 60, 20 * 60),
-    "evening": (19 * 60, 22 * 60),
-    "night": (21 * 60, 23 * 60),
-    "any": (8 * 60, 21 * 60),
-}
 
 
 def _sort_by_time_of_day(experiences: list[Experience], persona: TravelerPersona) -> list[Experience]:
@@ -148,57 +139,24 @@ def _build_day_schedule(
     day_number: int,
     total_days: int,
     weather: dict | None,
+    keep_order: bool = False,
 ) -> DayPlan:
-    start_minutes = get_day_start_time(persona)
+    # The unified planner already chose the order; the old pipeline sorts by time of day here.
+    ordered = experiences if keep_order else _sort_by_time_of_day(experiences, persona)
 
-    # Reorder to respect time-of-day preferences
-    ordered = _sort_by_time_of_day(experiences, persona)
-
-    current_time = start_minutes
-    scheduled = []
-    total_cost = 0.0
-    total_walk_km = 0.0
-
-    prev_exp = None
-    for exp in ordered:
-        # Advance time to meet best_time_of_day window if needed
-        window = TIME_OF_DAY_WINDOWS.get(exp.best_time_of_day, (8 * 60, 21 * 60))
-        if current_time < window[0]:
-            current_time = window[0]
-
-        # Travel time from previous
-        travel_mins = 0
-        travel_mode = "walk"
-        if prev_exp:
-            travel_mins = travel_time_minutes(prev_exp, exp, "walk")
-            if travel_mins > 20:
-                travel_mode = "transit"
-                travel_mins = travel_time_minutes(prev_exp, exp, "transit")
-            else:
-                walk_km = haversine(prev_exp.location[0], prev_exp.location[1], exp.location[0], exp.location[1])
-                total_walk_km += walk_km
-
-        current_time += travel_mins
-
-        start_str = minutes_to_time(current_time)
-        end_str = minutes_to_time(current_time + exp.duration_minutes)
-
-        scheduled.append(ScheduledExperience(
-            experience=exp,
-            start_time=start_str,
-            end_time=end_str,
-            travel_time_from_prev=travel_mins,
-            travel_mode=travel_mode,
-        ))
-
-        current_time += exp.duration_minutes
-        total_cost += exp.cost_euros
-
-        # Add rest buffer for slow travelers
-        if persona.pace >= 7:
-            current_time += 30  # 30-min breathing room
-
-        prev_exp = exp
+    slots = time_day(ordered, persona)
+    scheduled = [
+        ScheduledExperience(
+            experience=slot.experience,
+            start_time=minutes_to_time(slot.start),
+            end_time=minutes_to_time(slot.end),
+            travel_time_from_prev=slot.travel,
+            travel_mode=slot.mode,
+        )
+        for slot in slots
+    ]
+    total_cost = sum(e.cost_euros for e in ordered)
+    total_walk_km = sum(slot.walk_km for slot in slots)
 
     arc_label, arc_desc = _get_arc_for_day(day_number, total_days)
 
@@ -255,7 +213,8 @@ async def assembler_node(state: PlanningState) -> PlanningState:
     for day_idx, day_exps in enumerate(optimized_days):
         day_num = day_idx + 1
         weather = weather_list[day_idx] if day_idx < len(weather_list) else {}
-        day_plan = _build_day_schedule(day_exps, persona, day_num, persona.trip_days, weather)
+        day_plan = _build_day_schedule(day_exps, persona, day_num, persona.trip_days, weather,
+                                       keep_order=state.get("days_ordered", False))
         if weather and weather.get("date"):
             day_plan.date = weather["date"]
         else:

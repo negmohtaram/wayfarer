@@ -9,10 +9,10 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from src.jobs.models import IdempotencyKeyReused, Job
+from src.jobs.models import DEADLINE_PASSED, IdempotencyKeyReused, Job
 
 COLUMNS = ("job_id, kind, status, payload, idempotency_key, attempts, reason, plan_id, "
-           "created_at, started_at, heartbeat_at, finished_at")
+           "created_at, started_at, heartbeat_at, finished_at, deadline_at")
 
 
 def _job(row: Any) -> Job:
@@ -20,7 +20,7 @@ def _job(row: Any) -> Job:
     d["job_id"] = str(d["job_id"])          # the driver returns uuid.UUID; the API speaks strings
     if isinstance(d["payload"], str):
         d["payload"] = json.loads(d["payload"])
-    for k in ("created_at", "started_at", "heartbeat_at", "finished_at"):
+    for k in ("created_at", "started_at", "heartbeat_at", "finished_at", "deadline_at"):
         d[k] = d[k].timestamp() if d[k] is not None else None
     return Job(**d)
 
@@ -40,16 +40,19 @@ class PostgresJobStore:
     async def close(self) -> None:
         await self.engine.dispose()
 
-    async def create(self, kind: str, payload: dict, idempotency_key: Optional[str] = None) -> tuple[Job, bool]:
+    async def create(self, kind: str, payload: dict, idempotency_key: Optional[str] = None,
+                     deadline_s: Optional[float] = None) -> tuple[Job, bool]:
         """A repeated idempotency key hits the UNIQUE constraint: nothing is inserted and the first job comes back,
         unless the first job was a different request (IdempotencyKeyReused)."""
         async with self.engine.begin() as conn:
             row = (await conn.execute(text(f"""
-                INSERT INTO jobs (job_id, kind, payload, idempotency_key)
-                VALUES (:job_id, :kind, CAST(:payload AS JSONB), :key)
+                INSERT INTO jobs (job_id, kind, payload, idempotency_key, deadline_at)
+                VALUES (:job_id, :kind, CAST(:payload AS JSONB), :key,
+                        now() + make_interval(secs => CAST(:deadline AS FLOAT)))
                 ON CONFLICT (idempotency_key) DO NOTHING
                 RETURNING {COLUMNS}"""),
-                {"job_id": uuid.uuid4().hex, "kind": kind, "payload": json.dumps(payload), "key": idempotency_key},
+                {"job_id": uuid.uuid4().hex, "kind": kind, "payload": json.dumps(payload), "key": idempotency_key,
+                 "deadline": deadline_s},
             )).first()
             if row is not None:
                 return _job(row), True
@@ -108,9 +111,10 @@ class PostgresJobStore:
         async with self.engine.begin() as conn:
             stale = "status = 'running' AND heartbeat_at < now() - make_interval(secs => :stale)"
             failed = (await conn.execute(text(f"""
-                UPDATE jobs SET status = 'failed', reason = 'worker_lost', finished_at = now()
-                WHERE {stale} AND attempts >= :max RETURNING {COLUMNS}"""),
-                {"stale": stale_after, "max": max_attempts})).all()
+                UPDATE jobs SET finished_at = now(), status = 'failed',
+                    reason = CASE WHEN deadline_at <= now() THEN :timeout ELSE 'worker_lost' END
+                WHERE {stale} AND (attempts >= :max OR deadline_at <= now()) RETURNING {COLUMNS}"""),
+                {"stale": stale_after, "max": max_attempts, "timeout": DEADLINE_PASSED})).all()
             requeued = (await conn.execute(text(f"""
                 UPDATE jobs SET status = 'queued' WHERE {stale} RETURNING {COLUMNS}"""),
                 {"stale": stale_after})).all()

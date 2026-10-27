@@ -13,6 +13,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 # Which planner builds the days: "baseline" (cluster + route) or "v2a" (greedy + local search).
 PLANNER = os.getenv("WAYFARER_PLANNER", "baseline")
+# A plan job finishes or fails within this many seconds of the request, queue time included.
+PLAN_JOB_DEADLINE_S = float(os.getenv("WAYFARER_PLAN_DEADLINE_S", "120"))
 GROQ_MODEL = "openai/gpt-oss-120b"
 # Provider limits per model: (requests per minute, tokens per minute). Set them to your account's limits.
 RATE_LIMITS = {

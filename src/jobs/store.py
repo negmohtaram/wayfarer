@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Any, Callable, Optional
 
-from src.jobs.models import IdempotencyKeyReused, Job, JobStatus
+from src.jobs.models import DEADLINE_PASSED, IdempotencyKeyReused, Job, JobStatus
 
 
 class InMemoryJobStore:
@@ -16,7 +16,8 @@ class InMemoryJobStore:
         self._plans: dict[str, dict] = {}
         self._lock = asyncio.Lock()
 
-    async def create(self, kind: str, payload: dict[str, Any], idempotency_key: Optional[str] = None) -> tuple[Job, bool]:
+    async def create(self, kind: str, payload: dict[str, Any], idempotency_key: Optional[str] = None,
+                     deadline_s: Optional[float] = None) -> tuple[Job, bool]:
         """Return (job, created). A repeated idempotency key returns the first job instead of a new one,
         or raises IdempotencyKeyReused when the request behind it is different."""
         async with self._lock:
@@ -25,8 +26,9 @@ class InMemoryJobStore:
                 if (first.kind, first.payload) != (kind, payload):
                     raise IdempotencyKeyReused(idempotency_key)
                 return first, False
-            job = Job(job_id=uuid.uuid4().hex, kind=kind, payload=payload,
-                      idempotency_key=idempotency_key, created_at=self._clock())
+            now = self._clock()
+            job = Job(job_id=uuid.uuid4().hex, kind=kind, payload=payload, idempotency_key=idempotency_key,
+                      created_at=now, deadline_at=now + deadline_s if deadline_s else None)
             self._jobs[job.job_id] = job
             if idempotency_key:
                 self._by_key[idempotency_key] = job.job_id
@@ -67,12 +69,15 @@ class InMemoryJobStore:
         job.status, job.reason, job.finished_at = JobStatus.FAILED, reason, self._clock()
 
     async def requeue_stale(self, stale_after: float, max_attempts: int) -> list[Job]:
-        """Running jobs whose worker stopped sending heartbeats go back to the queue, or fail after max_attempts."""
+        """Running jobs whose worker stopped sending heartbeats go back to the queue,
+        or fail after max_attempts or once their deadline has passed."""
         async with self._lock:
             now, touched = self._clock(), []
             for job in self._jobs.values():
                 if job.status is JobStatus.RUNNING and now - job.heartbeat_at > stale_after:
-                    if job.attempts >= max_attempts:
+                    if job.deadline_at is not None and now >= job.deadline_at:
+                        job.status, job.reason, job.finished_at = JobStatus.FAILED, DEADLINE_PASSED, now
+                    elif job.attempts >= max_attempts:
                         job.status, job.reason, job.finished_at = JobStatus.FAILED, "worker_lost", now
                     else:
                         job.status = JobStatus.QUEUED

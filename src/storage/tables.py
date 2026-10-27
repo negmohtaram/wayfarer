@@ -19,6 +19,7 @@ jobs = Table(
     Column("started_at", DateTime(timezone=True)),
     Column("heartbeat_at", DateTime(timezone=True)),
     Column("finished_at", DateTime(timezone=True)),
+    Column("deadline_at", DateTime(timezone=True)),
     CheckConstraint("status IN ('queued', 'running', 'done', 'failed')", name="jobs_status_valid"),
 )
 

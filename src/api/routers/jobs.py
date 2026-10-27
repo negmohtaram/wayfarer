@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
+from src.config import PLAN_JOB_DEADLINE_S
 from src.jobs.models import IdempotencyKeyReused, JobAccepted, JobView, PlanJobRequest
 from src.models.persona import TravelerPersona
 
@@ -16,7 +17,8 @@ async def create_plan_job(req: PlanJobRequest, request: Request, response: Respo
     except Exception as e:
         raise HTTPException(422, f"Invalid persona: {e}")
     try:
-        job, created = await request.app.state.jobs.create("plan", req.model_dump(), idempotency_key)
+        job, created = await request.app.state.jobs.create("plan", req.model_dump(), idempotency_key,
+                                                            deadline_s=PLAN_JOB_DEADLINE_S)
     except IdempotencyKeyReused:
         # 422, as in the IETF Idempotency-Key draft; the type tells it apart from an invalid persona.
         raise HTTPException(422, {"type": "idempotency_key_reused",

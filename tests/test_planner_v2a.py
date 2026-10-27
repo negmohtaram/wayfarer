@@ -7,7 +7,8 @@ from src.evaluation.scenarios.baseline_scenarios import ALL_SCENARIOS, SCENARIO_
 from src.knowledge.rag import get_city_experiences
 from src.models.constraints import check_experience
 from src.planning import planner_v2a
-from src.planning.planner_v2a import MIN_STOPS_PER_DAY, plan_v2a
+from src.planning.planner_v2a import DAY_END_LIMIT, MIN_STOPS_PER_DAY, plan_v2a
+from src.planning.timing import time_day
 
 
 def candidates(persona):
@@ -33,6 +34,7 @@ def test_every_scenario_gets_a_plan_that_passes_the_hard_rules(scenario):
     for day in result.days:
         assert MIN_STOPS_PER_DAY <= len(day) <= per_day
         assert sum(e.cost_euros for e in day) <= persona.hard.day_budget_ceiling
+        assert time_day(day, persona)[-1].end <= DAY_END_LIMIT                   # the day fits in waking hours
     assert sum(e.cost_euros for day in result.days for e in day) <= persona.hard.trip_budget_ceiling
 
 
@@ -74,3 +76,9 @@ def test_too_few_stops_is_infeasible_with_a_reason():
     result = plan_v2a(candidates(persona)[:3], persona, 4)
     assert result.status == "infeasible"
     assert "at least" in result.reason
+
+
+def test_a_short_catalogue_is_spread_evenly_over_the_days():
+    persona = SCENARIO_BY_ID["length_fiveday_tokyo"].persona          # 15 stops for 5 days at 4 a day
+    result = plan_v2a(candidates(persona), persona, _experiences_per_day(persona))
+    assert sorted(len(day) for day in result.days) == [3, 3, 3, 3, 3]

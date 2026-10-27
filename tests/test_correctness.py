@@ -356,3 +356,18 @@ def test_replan_never_gives_wheelchair_user_an_inaccessible_stop(monkeypatch):
     assert day2.experiences, "replan should still schedule accessible stops"
     assert all(se.experience.physical_intensity == "low" for se in day2.experiences)
 
+
+
+def test_assembler_keeps_the_order_the_planner_chose():
+    from src.agents.nodes.assembler import _build_day_schedule
+    from src.evaluation.scenarios.baseline_scenarios import SCENARIO_BY_ID
+    from src.knowledge.rag import get_city_experiences
+
+    persona = SCENARIO_BY_ID["balanced_paris_reference"].persona
+    by_time = {e.best_time_of_day: e for e in get_city_experiences("paris")}
+    evening_first = [by_time["evening"], by_time["morning"]]           # an order the time-of-day sort would flip
+
+    kept = _build_day_schedule(evening_first, persona, 1, 1, None, keep_order=True)
+    sorted_ = _build_day_schedule(evening_first, persona, 1, 1, None)
+    assert [s.experience.id for s in kept.experiences] == [e.id for e in evening_first]
+    assert [s.experience.id for s in sorted_.experiences] == [e.id for e in reversed(evening_first)]

@@ -48,6 +48,7 @@ async def optimizer_node(state: PlanningState) -> PlanningState:
             state["error"] = f"No plan: {result.reason}"
             return state
         state["optimized_days"] = result.days
+        state["days_ordered"] = True        # the assembler keeps this order instead of re-sorting
         state["log"].append(f"📐 Planner v2a: {days} days, {result.moves_kept} improving moves")
         return state
 

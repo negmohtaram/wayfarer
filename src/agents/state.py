@@ -19,6 +19,7 @@ class PlanningState(BaseGraphState, total=False):
     feasible: list[Experience]              # every stop that passed the hard rules, scored, before the variety cut
     planner: str                            # "baseline" | "v2a"; overrides config.PLANNER for this run
     planner_trace: dict[str, Any]
+    days_ordered: bool                      # True when the planner fixed the order and times
     rejected: list[ConstraintViolation]     # stops removed by hard constraints, with reasons
     optimized_days: list[list[Experience]]
     critiques: list[CritiqueResult]

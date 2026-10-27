@@ -3,25 +3,20 @@
     TEST_DATABASE_URL=postgresql+asyncpg://wayfarer:wayfarer-dev@localhost:5432/wayfarer_test pytest tests/test_pg_store.py
 """
 import asyncio
-import os
 
 import pytest
 from sqlalchemy import text
 
 from src.jobs.models import IdempotencyKeyReused, JobStatus
 from src.jobs.pg_store import PostgresJobStore
-from src.storage.tables import metadata
+from tests.conftest import TEST_DATABASE_URL as URL
 
-URL = os.getenv("TEST_DATABASE_URL", "")
-pytestmark = pytest.mark.skipif(not URL, reason="TEST_DATABASE_URL not set")
+pytestmark = pytest.mark.usefixtures("fresh_pg")
 
 
 def run(coro_fn):
     async def go():
         store = PostgresJobStore(URL)
-        async with store.engine.begin() as conn:
-            await conn.run_sync(metadata.drop_all)
-            await conn.run_sync(metadata.create_all)
         try:
             return await coro_fn(store)
         finally:

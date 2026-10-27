@@ -69,6 +69,27 @@ def test_unknown_job_is_404(client):
     assert client.get("/api/jobs/nope").status_code == 404
 
 
+def test_unknown_plan_is_404(client):
+    assert client.get("/api/plans/nope").status_code == 404
+
+
+def test_body_without_persona_is_422(client):
+    resp = client.post("/api/plans", json={})
+    assert resp.status_code == 422
+    assert isinstance(resp.json()["detail"], list)          # FastAPI's own check, before our code runs
+
+
+def test_persona_that_is_not_an_object_is_422(client):
+    resp = client.post("/api/plans", json={"persona": "paris"})
+    assert resp.status_code == 422
+    assert isinstance(resp.json()["detail"], list)
+
+
+def test_body_that_is_not_json_is_422(client):
+    resp = client.post("/api/plans", content=b"plan me a trip", headers={"Content-Type": "application/json"})
+    assert resp.status_code == 422
+
+
 class Clock:
     def __init__(self):
         self.now = 1000.0

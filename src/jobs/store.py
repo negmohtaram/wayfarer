@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Any, Callable, Optional
 
-from src.jobs.models import IdempotencyKeyReused, Job, JobStatus
+from src.jobs.models import DEADLINE_PASSED, IdempotencyKeyReused, Job, JobStatus
 
 
 class InMemoryJobStore:
@@ -69,12 +69,15 @@ class InMemoryJobStore:
         job.status, job.reason, job.finished_at = JobStatus.FAILED, reason, self._clock()
 
     async def requeue_stale(self, stale_after: float, max_attempts: int) -> list[Job]:
-        """Running jobs whose worker stopped sending heartbeats go back to the queue, or fail after max_attempts."""
+        """Running jobs whose worker stopped sending heartbeats go back to the queue,
+        or fail after max_attempts or once their deadline has passed."""
         async with self._lock:
             now, touched = self._clock(), []
             for job in self._jobs.values():
                 if job.status is JobStatus.RUNNING and now - job.heartbeat_at > stale_after:
-                    if job.attempts >= max_attempts:
+                    if job.deadline_at is not None and now >= job.deadline_at:
+                        job.status, job.reason, job.finished_at = JobStatus.FAILED, DEADLINE_PASSED, now
+                    elif job.attempts >= max_attempts:
                         job.status, job.reason, job.finished_at = JobStatus.FAILED, "worker_lost", now
                     else:
                         job.status = JobStatus.QUEUED

@@ -9,7 +9,7 @@ from typing import Any, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from src.jobs.models import IdempotencyKeyReused, Job
+from src.jobs.models import DEADLINE_PASSED, IdempotencyKeyReused, Job
 
 COLUMNS = ("job_id, kind, status, payload, idempotency_key, attempts, reason, plan_id, "
            "created_at, started_at, heartbeat_at, finished_at, deadline_at")
@@ -111,9 +111,10 @@ class PostgresJobStore:
         async with self.engine.begin() as conn:
             stale = "status = 'running' AND heartbeat_at < now() - make_interval(secs => :stale)"
             failed = (await conn.execute(text(f"""
-                UPDATE jobs SET status = 'failed', reason = 'worker_lost', finished_at = now()
-                WHERE {stale} AND attempts >= :max RETURNING {COLUMNS}"""),
-                {"stale": stale_after, "max": max_attempts})).all()
+                UPDATE jobs SET finished_at = now(), status = 'failed',
+                    reason = CASE WHEN deadline_at <= now() THEN :timeout ELSE 'worker_lost' END
+                WHERE {stale} AND (attempts >= :max OR deadline_at <= now()) RETURNING {COLUMNS}"""),
+                {"stale": stale_after, "max": max_attempts, "timeout": DEADLINE_PASSED})).all()
             requeued = (await conn.execute(text(f"""
                 UPDATE jobs SET status = 'queued' WHERE {stale} RETURNING {COLUMNS}"""),
                 {"stale": stale_after})).all()

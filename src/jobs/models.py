@@ -8,6 +8,9 @@ class IdempotencyKeyReused(Exception):
     """The key was already used for a different request. A retry sends the same body, so this is a client bug."""
 
 
+DEADLINE_PASSED = "timeout: the plan deadline passed"
+
+
 class JobStatus(str, Enum):
     QUEUED = "queued"
     RUNNING = "running"

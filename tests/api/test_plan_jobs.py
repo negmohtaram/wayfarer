@@ -5,7 +5,7 @@ import time
 
 
 from src.evaluation.scenarios.baseline_scenarios import SCENARIO_BY_ID
-from src.jobs.models import JobStatus
+from src.jobs.models import DEADLINE_PASSED, JobStatus
 from src.jobs.store import InMemoryJobStore
 from src.jobs.worker import Worker
 
@@ -112,6 +112,66 @@ def test_a_crashing_job_fails_with_its_reason():
     assert job.status is JobStatus.FAILED
     assert job.reason == "ValueError: catalogue missing for city"
 
+
+def test_a_hanging_job_fails_at_its_deadline():
+    async def hangs(job, factory):
+        await asyncio.Event().wait()               # a model call that never answers
+
+    async def go():
+        store = InMemoryJobStore()
+        job, _ = await store.create("plan", {}, deadline_s=0.2)
+        start = time.monotonic()
+        await Worker(store, None, runner=hangs).run_one(await store.claim_next())
+        return await store.get(job.job_id), time.monotonic() - start
+
+    job, took = asyncio.run(go())
+    assert job.status is JobStatus.FAILED and job.reason == DEADLINE_PASSED
+    assert took < 1.0
+
+
+def test_a_timeout_inside_the_job_keeps_its_own_reason():
+    async def slow_call(job, factory):
+        raise TimeoutError("weather service did not answer")
+
+    async def go():
+        store = InMemoryJobStore()
+        job, _ = await store.create("plan", {}, deadline_s=60)
+        await Worker(store, None, runner=slow_call).run_one(await store.claim_next())
+        return await store.get(job.job_id)
+
+    assert asyncio.run(go()).reason == "TimeoutError: weather service did not answer"
+
+
+def test_a_job_past_its_deadline_is_failed_without_running():
+    ran = []
+
+    async def runner(job, factory):
+        ran.append(job.job_id)
+
+    async def go():
+        clock = Clock()
+        store = InMemoryJobStore(clock=clock)
+        job, _ = await store.create("plan", {}, deadline_s=120)
+        clock.now += 300                            # five minutes in the queue
+        await Worker(store, None, runner=runner, clock=clock).run_one(await store.claim_next())
+        return await store.get(job.job_id)
+
+    job = asyncio.run(go())
+    assert job.status is JobStatus.FAILED and job.reason == DEADLINE_PASSED and ran == []
+
+
+def test_a_lost_job_past_its_deadline_is_failed_not_requeued():
+    async def go():
+        clock = Clock()
+        store = InMemoryJobStore(clock=clock)
+        job, _ = await store.create("plan", {}, deadline_s=120)
+        await store.claim_next()                    # attempt 1 of 3, then the worker dies
+        clock.now += 130
+        await store.requeue_stale(stale_after=60, max_attempts=3)
+        return await store.get(job.job_id)
+
+    job = asyncio.run(go())
+    assert job.status is JobStatus.FAILED and job.reason == DEADLINE_PASSED and job.attempts == 1
 
 def test_stale_running_job_is_requeued_then_fails_after_max_attempts():
     async def go():

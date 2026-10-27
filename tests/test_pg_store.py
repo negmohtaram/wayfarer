@@ -7,7 +7,7 @@ import asyncio
 import pytest
 from sqlalchemy import text
 
-from src.jobs.models import IdempotencyKeyReused, JobStatus
+from src.jobs.models import DEADLINE_PASSED, IdempotencyKeyReused, JobStatus
 from src.jobs.pg_store import PostgresJobStore
 from tests.conftest import TEST_DATABASE_URL as URL
 
@@ -112,6 +112,25 @@ def test_stale_job_is_requeued_then_failed():
     job = run(go)
     assert job.status is JobStatus.FAILED and job.reason == "worker_lost" and job.attempts == 3
 
+
+def test_lost_job_past_its_deadline_is_failed_not_requeued():
+    async def go(store):
+        lost, _ = await store.create("plan", {}, deadline_s=120)
+        await store.claim_next()
+        async with store.engine.begin() as conn:     # worker died, and the deadline passed too
+            await conn.execute(text("""UPDATE jobs SET heartbeat_at = now() - interval '2 minutes',
+                                       deadline_at = now() - interval '1 second'"""))
+        fresh, _ = await store.create("plan", {}, deadline_s=120)
+        await store.claim_next()
+        async with store.engine.begin() as conn:     # this one only lost its worker
+            await conn.execute(text("UPDATE jobs SET heartbeat_at = now() - interval '2 minutes' WHERE job_id = :id"),
+                               {"id": fresh.job_id})
+        await store.requeue_stale(stale_after=60, max_attempts=3)
+        return await store.get(lost.job_id), await store.get(fresh.job_id)
+
+    lost, fresh = run(go)
+    assert lost.status is JobStatus.FAILED and lost.reason == DEADLINE_PASSED
+    assert fresh.status is JobStatus.QUEUED
 
 def test_bad_status_is_refused_by_the_database():
     async def go(store):

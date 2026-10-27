@@ -30,6 +30,7 @@ class Job(BaseModel):
     started_at: Optional[float] = None
     heartbeat_at: Optional[float] = None
     finished_at: Optional[float] = None
+    deadline_at: Optional[float] = None   # past this, the job fails instead of running on
 
 
 class PlanJobRequest(BaseModel):
@@ -52,3 +53,4 @@ class JobView(BaseModel):
     created_at: float
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
+    deadline_at: Optional[float] = None

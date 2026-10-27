@@ -8,7 +8,7 @@ import os
 import pytest
 from sqlalchemy import text
 
-from src.jobs.models import JobStatus
+from src.jobs.models import IdempotencyKeyReused, JobStatus
 from src.jobs.pg_store import PostgresJobStore
 from src.storage.tables import metadata
 
@@ -54,6 +54,18 @@ def test_same_key_at_the_same_moment_makes_one_job():
     assert count == 1
     assert len({job.job_id for job, _ in results}) == 1
     assert sum(created for _, created in results) == 1
+
+
+def test_same_key_with_a_different_payload_is_refused():
+    async def go(store):
+        await store.create("plan", {"persona": {"destination": "paris", "trip_days": 3}}, "k1")
+        same = await store.create("plan", {"persona": {"trip_days": 3, "destination": "paris"}}, "k1")
+        with pytest.raises(IdempotencyKeyReused):
+            await store.create("plan", {"persona": {"destination": "tokyo", "trip_days": 3}}, "k1")
+        return same
+
+    _, created = run(go)
+    assert created is False            # key order alone does not make it a different request
 
 
 def test_two_workers_never_claim_the_same_job():

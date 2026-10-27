@@ -52,6 +52,19 @@ def test_same_idempotency_key_returns_the_same_job(client):
     assert a["job_id"] == b["job_id"]
 
 
+def test_same_key_with_a_different_body_is_rejected(client):
+    tokyo = PERSONA.model_copy(update={"destination": "tokyo"})
+    first = client.post("/api/plans", json={"persona": PERSONA.model_dump(mode="json")},
+                        headers={"Idempotency-Key": "k1"})
+    second = client.post("/api/plans", json={"persona": tokyo.model_dump(mode="json")},
+                         headers={"Idempotency-Key": "k1"})
+
+    assert first.status_code == 202
+    assert second.status_code == 422
+    assert second.json()["detail"]["type"] == "idempotency_key_reused"
+    assert len(client.app.state.jobs._jobs) == 1          # the Tokyo request created nothing
+
+
 def test_unknown_job_is_404(client):
     assert client.get("/api/jobs/nope").status_code == 404
 

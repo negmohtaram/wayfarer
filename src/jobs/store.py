@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Any, Callable, Optional
 
-from src.jobs.models import Job, JobStatus
+from src.jobs.models import IdempotencyKeyReused, Job, JobStatus
 
 
 class InMemoryJobStore:
@@ -17,10 +17,14 @@ class InMemoryJobStore:
         self._lock = asyncio.Lock()
 
     async def create(self, kind: str, payload: dict[str, Any], idempotency_key: Optional[str] = None) -> tuple[Job, bool]:
-        """Return (job, created). A repeated idempotency key returns the first job instead of a new one."""
+        """Return (job, created). A repeated idempotency key returns the first job instead of a new one,
+        or raises IdempotencyKeyReused when the request behind it is different."""
         async with self._lock:
             if idempotency_key and idempotency_key in self._by_key:
-                return self._jobs[self._by_key[idempotency_key]], False
+                first = self._jobs[self._by_key[idempotency_key]]
+                if (first.kind, first.payload) != (kind, payload):
+                    raise IdempotencyKeyReused(idempotency_key)
+                return first, False
             job = Job(job_id=uuid.uuid4().hex, kind=kind, payload=payload,
                       idempotency_key=idempotency_key, created_at=self._clock())
             self._jobs[job.job_id] = job

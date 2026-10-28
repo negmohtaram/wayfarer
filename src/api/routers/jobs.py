@@ -34,7 +34,7 @@ async def get_job(job_id: str, request: Request):
     job = await request.app.state.jobs.get(job_id)
     if job is None:
         raise HTTPException(404, f"Job {job_id} not found")
-    return JobView(**job.model_dump())
+    return JobView.of(job)
 
 
 @router.get("/plans/{plan_id}")

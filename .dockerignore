@@ -1,0 +1,15 @@
+.env
+.git
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+tests
+eval_results
+sessions
+data
+docs
+scripts
+sse_consumer.py

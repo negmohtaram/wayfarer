@@ -39,6 +39,8 @@ uvicorn src.api.main:app
 
 Then open http://localhost:8000.
 
+The API plans in the background. `POST /api/plans` answers 202 with a job id and a `Location` header, and `GET /api/jobs/{id}` shows the status. Send an `Idempotency-Key` header so a repeated POST returns the same job instead of starting a second one. A job that runs past its deadline (120 s by default, `WAYFARER_PLAN_DEADLINE_S`) fails with `retryable: true`. To try again, send the request with a new key, because the old key keeps returning the failed job.
+
 Replay the baseline with no API key and no network. The recorded model and weather calls are in `eval_results/recordings/baseline_v1/`:
 
 ```bash

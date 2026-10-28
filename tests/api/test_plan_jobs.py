@@ -5,7 +5,7 @@ import time
 
 
 from src.evaluation.scenarios.baseline_scenarios import SCENARIO_BY_ID
-from src.jobs.models import DEADLINE_PASSED, JobStatus
+from src.jobs.models import DEADLINE_PASSED, JobStatus, JobView
 from src.jobs.store import InMemoryJobStore
 from src.jobs.worker import Worker
 
@@ -172,6 +172,42 @@ def test_a_lost_job_past_its_deadline_is_failed_not_requeued():
 
     job = asyncio.run(go())
     assert job.status is JobStatus.FAILED and job.reason == DEADLINE_PASSED and job.attempts == 1
+
+
+def test_a_timed_out_job_is_retryable_and_a_bad_request_is_not():
+    async def hangs(job, factory):
+        await asyncio.Event().wait()
+
+    async def boom(job, factory):
+        raise ValueError("catalogue missing for city")
+
+    async def go():
+        store = InMemoryJobStore()
+        views = []
+        for runner in (hangs, boom):
+            job, _ = await store.create("plan", {}, deadline_s=0.1)
+            await Worker(store, None, runner=runner).run_one(await store.claim_next())
+            views.append(JobView.of(await store.get(job.job_id)))
+        return views
+
+    timed_out, crashed = asyncio.run(go())
+    assert timed_out.retryable is True
+    assert crashed.status == "failed" and crashed.retryable is False
+
+
+def test_retry_after_a_failure_needs_a_new_idempotency_key():
+    async def go():
+        store = InMemoryJobStore()
+        first, _ = await store.create("plan", {"persona": 1}, "k1", deadline_s=120)
+        await store.fail(first.job_id, DEADLINE_PASSED)
+        again, created_again = await store.create("plan", {"persona": 1}, "k1", deadline_s=120)
+        retry, created_retry = await store.create("plan", {"persona": 1}, "k2", deadline_s=120)
+        return first, again, created_again, retry, created_retry
+
+    first, again, created_again, retry, created_retry = asyncio.run(go())
+    assert again.job_id == first.job_id and not created_again        # one key, one outcome
+    assert again.status is JobStatus.FAILED
+    assert created_retry and retry.job_id != first.job_id and retry.status is JobStatus.QUEUED
 
 def test_stale_running_job_is_requeued_then_fails_after_max_attempts():
     async def go():

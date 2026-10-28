@@ -9,6 +9,8 @@ class IdempotencyKeyReused(Exception):
 
 
 DEADLINE_PASSED = "timeout: the plan deadline passed"
+# Failures that say nothing about the request itself: the same request may work if sent again.
+RETRYABLE_REASONS = {DEADLINE_PASSED, "worker_lost"}
 
 
 class JobStatus(str, Enum):
@@ -57,3 +59,8 @@ class JobView(BaseModel):
     started_at: Optional[float] = None
     finished_at: Optional[float] = None
     deadline_at: Optional[float] = None
+    retryable: bool = False     # failed, and sending the request again (with a new Idempotency-Key) may work
+
+    @classmethod
+    def of(cls, job: Job) -> "JobView":
+        return cls(**job.model_dump(), retryable=job.status is JobStatus.FAILED and job.reason in RETRYABLE_REASONS)

@@ -12,4 +12,5 @@ sessions
 data
 docs
 scripts
+!scripts/seed.py
 sse_consumer.py

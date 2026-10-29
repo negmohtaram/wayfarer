@@ -35,6 +35,7 @@ data/
 *.swo
 sse_consumer.py
 eval_results/*
+!eval_results/planner_*_vs_*.json
 !eval_results/recordings/
 eval_results/recordings/*
 # Recorded calls of tagged baselines are kept so they replay without an API key

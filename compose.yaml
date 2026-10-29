@@ -1,0 +1,34 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: wayfarer
+      POSTGRES_PASSWORD: wayfarer-local
+      POSTGRES_DB: wayfarer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "wayfarer", "-d", "wayfarer"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://wayfarer:wayfarer-local@db:5432/wayfarer
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    command: sh -c "alembic upgrade head && python -m scripts.seed && uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+
+volumes:
+  pgdata:

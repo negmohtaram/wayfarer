@@ -23,6 +23,7 @@ COPY alembic.ini ./
 COPY alembic ./alembic
 COPY frontend ./frontend
 COPY src ./src
+COPY scripts/seed.py ./scripts/
 
 # The app writes sessions here, so the non-root user must own it
 RUN mkdir sessions && chown app:app sessions

@@ -42,7 +42,7 @@ def create_app(llm_factory: Callable[..., Any] = get_llm, require_key: bool = Tr
             await app.state.jobs.close()
 
     app = FastAPI(title="WAYFARER", description="Multi-agent AI travel planning system",
-                  version="0.1.0", lifespan=lifespan)
+                  version="0.3.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

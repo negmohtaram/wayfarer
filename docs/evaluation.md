@@ -199,7 +199,32 @@ SCENARIO_BY_ID[MY_SCENARIO.id] = MY_SCENARIO
 
 ---
 
-## Next
+## Comparing versions
 
-Run the full scenario set against a live model and commit the `baseline_v1` report.
-Planner changes are measured against that report.
+With 56 scenarios and a pass rate near 93%, the 95% interval on one pass rate is about plus or minus 7 points. Two separate pass rates therefore can't show a 5-point improvement. Changes are compared on the same scenarios instead. We count the scenarios a change fixes and the ones it breaks, and bootstrap the difference over scenarios. A new planner version makes new model calls, so it runs with repeats, which keeps model noise from looking like an improvement. Reaching plus or minus 5 points on a single rate would need roughly twice as many scenarios.
+
+### v0.3_domain: hard constraints before scoring
+
+Wheelchair access and single-stop cost are checked before any stop is scored, and a day over the budget ceiling can no longer be approved by the budget critic. The 52 scenarios this change does not touch replay exactly. The 4 budget scenarios plan differently, so their model calls were recorded again into `eval_results/recordings/v0.3_domain/`, once each.
+
+The result was 4 fixed scenarios and none broken. That alone is not significant (sign test p about 0.13). The case rests on each fix having a known cause and a test that failed before the change. The budget is met by removing the most expensive stop, so those days are shorter. Swapping in a cheaper stop of the same kind is planned. The report is in `docs/v0.3_domain_report.json`.
+
+## Trip chat router
+
+The router reads one traveler message about a finished plan. A single model call with a forced tool returns the intent and the day the message refers to. The intents are `change_setting`, `feedback`, `explain`, `what_if`, `ask`, `out_of_scope` and `none_of_these`. An invalid reply gets one retry, then the router falls back to `none_of_these`.
+
+It is tested on two hand-labelled sets. Amsterdam has 200 messages for a 3-day trip. Lisbon has 105 messages for a 4-day trip, written separately and held out. The v1 prompt adds similar labelled examples picked by embedding similarity from the Amsterdam set. That condition is only measured on Lisbon, so no test message appears in its own examples.
+
+| set | prompt | intent correct (95% CI) | intent and day correct |
+|---|---|---|---|
+| Amsterdam | v0 | 84.0% (78.5 to 89.0) | 81.5% |
+| Lisbon | v0 | 77.1% (68.6 to 84.8) | 69.5% |
+| Lisbon | v1 with examples | 97.1% (93.3 to 100) | 96.2% |
+
+On v0, 11 of the 13 messages with the right intent but the wrong day were about "the last day" or "our final day". The v1 prompt returns them as a reference to the last day, and code turns that into a number for the trip at hand. All five prompt injection messages in the Lisbon set were routed as `out_of_scope`.
+
+```bash
+python -m src.evaluation.chat_eval
+python -m src.evaluation.chat_eval --set lisbon
+python -m src.evaluation.chat_eval --set lisbon --prompt v1 --retrieval
+```

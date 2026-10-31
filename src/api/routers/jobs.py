@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
 
-from src.config import PLAN_JOB_DEADLINE_S
+from src.config import PLAN_JOB_DEADLINE_S, SUPPORTED_CITIES
 from src.jobs.models import IdempotencyKeyReused, JobAccepted, JobView, PlanJobRequest
 from src.models.persona import TravelerPersona
 
@@ -13,9 +13,13 @@ router = APIRouter(tags=["jobs"])
 async def create_plan_job(req: PlanJobRequest, request: Request, response: Response,
                           idempotency_key: Optional[str] = Header(None)):
     try:
-        TravelerPersona(**req.persona)          # bad input is rejected now, not inside the job
+        persona = TravelerPersona(**req.persona)    # bad input is rejected now, not inside the job
     except Exception as e:
         raise HTTPException(422, f"Invalid persona: {e}")
+    if persona.destination.lower() not in SUPPORTED_CITIES:
+        raise HTTPException(422, {"type": "unsupported_destination",
+                                  "message": f"No city data for '{persona.destination}'. "
+                                             f"Supported: {', '.join(SUPPORTED_CITIES)}"})
     try:
         job, created = await request.app.state.jobs.create("plan", req.model_dump(), idempotency_key,
                                                             deadline_s=PLAN_JOB_DEADLINE_S)

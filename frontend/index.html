@@ -1061,6 +1061,10 @@ async function sendQuizTurn(userMessage) {
       }),
     });
 
+    if (!res.ok) {
+      showQuizError(await errorText(res));
+      return;
+    }
     const data = await res.json();
 
     if (data.complete) {
@@ -1087,13 +1091,26 @@ async function sendQuizTurn(userMessage) {
       }, 100);
     }
   } catch(e) {
-    document.getElementById('quiz-container').innerHTML = `
-      <div style="color:var(--red);font-size:13px;padding:12px;">
-        Error connecting to server. Make sure the backend is running.
-      </div>
-      <button class="btn btn-ghost" style="margin-top:8px;" onclick="startQuiz()">Retry</button>
-    `;
+    showQuizError("Can't reach the Wayfarer server. Check that it is running.");
   }
+}
+
+// The server's own reason when it sent one, e.g. the model provider being unavailable.
+async function errorText(res) {
+  try {
+    const detail = (await res.json()).detail;
+    if (detail && detail.message) return detail.message;
+    if (typeof detail === 'string') return detail;
+  } catch(e) {}
+  return `Something went wrong on the server (${res.status}).`;
+}
+
+function showQuizError(message) {
+  document.getElementById('quiz-container').innerHTML = `
+    <div id="quiz-error" style="color:var(--red);font-size:13px;padding:12px;"></div>
+    <button class="btn btn-ghost" style="margin-top:8px;" onclick="startQuiz()">Retry</button>
+  `;
+  document.getElementById('quiz-error').textContent = message;
 }
 
 function showQuizLoading() {

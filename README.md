@@ -48,7 +48,7 @@ Without `DATABASE_URL` in `.env`, jobs and plans are kept in memory and lost on 
 
 ### Troubleshooting
 
-If the page says the planning model can't be reached, the server is running but Groq refused or timed out. Groq blocks some regions, so check your network first.
+If the page says the planning model can't be reached, the server is running but Groq refused or timed out. Groq blocks some regions and some VPN exit addresses. If a request with a wrong key also gets 403 "Access denied", the block is on the network, not the key, so try another network or VPN server.
 
 ## API
 

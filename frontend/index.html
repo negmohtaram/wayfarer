@@ -773,8 +773,10 @@
     .main { grid-template-columns: 300px 1fr 340px; }
   }
   @media (max-width: 900px) {
-    .main { grid-template-columns: 1fr; grid-template-rows: auto 50vh auto; }
-    body { overflow: auto; }
+    /* One column that grows with its content; a fixed height made the map cover the panel. */
+    body { height: auto; overflow: auto; }
+    .main { grid-template-columns: 1fr; grid-template-rows: auto 50vh auto; height: auto; overflow: visible; }
+    .left-panel, .right-panel { overflow: visible; }
   }
 
   /* Serendipity zone styling for map */

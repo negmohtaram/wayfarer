@@ -57,14 +57,17 @@ class Limiter:
         """Wait until one request and `tokens` tokens are free, then take both together.
 
         Raises NoCapacity instead of waiting past max_wait seconds (time in the queue counts).
+        A call larger than the bucket waits for a full bucket, then leaves it in debt, so the
+        calls after it wait until the debt has refilled. Totals per minute stay the same.
         """
         give_up = _now() + max_wait
-        if tokens > self.tokens.capacity:
-            raise ValueError(f"a call of {tokens:.0f} tokens can never fit a bucket of "
-                             f"{self.tokens.capacity:.0f}")
+        if tokens > self.tokens.rate * 60:
+            raise ValueError(f"a call of {tokens:.0f} tokens is more than a minute's budget "
+                             f"of {self.tokens.rate * 60:.0f}")
+        needed = min(tokens, self.tokens.capacity)
         async with self._lock:          # first come, first served; both buckets change together
             while True:
-                wait = max(self.requests.wait_time(1), self.tokens.wait_time(tokens))
+                wait = max(self.requests.wait_time(1), self.tokens.wait_time(needed))
                 if wait <= 1e-9:
                     self.requests.level -= 1
                     self.tokens.level -= tokens

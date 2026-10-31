@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
-from src.agents.llm import get_llm
+from src.agents.llm import LLMCallError, get_llm
 from src.api.routers import chat, itineraries, jobs, meta, persona, planning
 from src.config import DATABASE_URL, GROQ_API_KEY
 from src.jobs.pg_store import PostgresJobStore
@@ -42,7 +42,7 @@ def create_app(llm_factory: Callable[..., Any] = get_llm, require_key: bool = Tr
             await app.state.jobs.close()
 
     app = FastAPI(title="WAYFARER", description="Multi-agent AI travel planning system",
-                  version="0.1.0", lifespan=lifespan)
+                  version="0.3.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -52,6 +52,15 @@ def create_app(llm_factory: Callable[..., Any] = get_llm, require_key: bool = Tr
     )
     for module in (persona, planning, jobs, chat, itineraries, meta):
         app.include_router(module.router, prefix="/api")
+
+    @app.exception_handler(LLMCallError)
+    async def model_unavailable(request: Request, exc: LLMCallError):
+        # Our server is fine; the model provider is not. Say so instead of a bare 500.
+        return JSONResponse(status_code=503, headers={"Retry-After": "30"}, content={"detail": {
+            "type": "model_unavailable",
+            "message": "The planning model can't be reached right now. Please try again in a minute.",
+            "upstream_status": exc.status,
+        }})
 
     @app.get("/")
     async def serve_frontend():

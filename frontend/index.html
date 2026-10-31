@@ -318,6 +318,8 @@
     min-height: 60%;
     z-index: 1;
   }
+  /* OpenStreetMap tiles are light; invert them to match the dark theme. Markers are in another pane. */
+  #map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9); }
 
   /* Agent progress overlay */
   .progress-overlay {
@@ -867,13 +869,12 @@
         <div style="text-align:center;padding:20px;">
           <div style="font-size:28px;margin-bottom:8px;">✈️</div>
           <div style="font-size:13px;color:var(--text-dim);">Build your traveler profile to get a plan made for you</div>
-          <button class="btn btn-gold" style="margin-top:16px;width:100%;" onclick="startQuiz()">Start Profile Quiz</button>
         </div>
       </div>
     </div>
 
     <!-- Generate button -->
-    <button class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;letter-spacing:1px;" id="generate-btn" onclick="generatePlan()" disabled>
+    <button class="btn btn-gold" style="width:100%;padding:14px;font-size:14px;letter-spacing:1px;" id="generate-btn" onclick="generatePlan()" hidden>
       Generate My Itinerary
     </button>
 
@@ -963,10 +964,9 @@ function initMap() {
     attributionControl: true,
   });
 
-  // CartoDB Dark Matter tiles
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '©OpenStreetMap ©CartoDB',
-    subdomains: 'abcd',
+  // CartoDB tiles now need an API key; OpenStreetMap's do not.
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
   }).addTo(state.map);
 
@@ -995,6 +995,7 @@ function init() {
 // ── Welcome ────────────────────────────────────────────────────────────────
 function dismissWelcome() {
   document.getElementById('welcome-overlay').style.display = 'none';
+  startQuiz();
 }
 
 // ── City selection ─────────────────────────────────────────────────────────
@@ -1067,7 +1068,7 @@ async function sendQuizTurn(userMessage) {
       state.personaComplete = true;
       state.persona.trip_start_date = state.startDate;
       showPersonaCard(data.persona, data.persona_tags, data.persona_narrative);
-      document.getElementById('generate-btn').disabled = false;
+      document.getElementById('generate-btn').hidden = false;
     } else {
       // Update conversation history
       if (userMessage) {

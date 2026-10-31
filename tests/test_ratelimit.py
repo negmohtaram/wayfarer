@@ -59,10 +59,18 @@ def test_requests_bind_for_small_calls(clock):
     assert times[5:] == pytest.approx([2, 4])
 
 
-def test_a_call_larger_than_the_bucket_fails_at_once(clock):
-    limiter = Limiter(rpm=30, tpm=6_000)          # token bucket holds 1,000
+def test_a_call_larger_than_the_bucket_goes_through_and_the_next_one_waits(clock):
+    # The persona builder resends the whole conversation, so by question 5 one call was larger than the
+    # 10 s bucket. It must wait for a full bucket, not fail.
+    limiter = Limiter(rpm=30, tpm=6_000)          # token bucket holds 1,000, refills 100/s
+    times = asyncio.run(start_times(limiter, clock, [1_500, 100]))
+    assert times == pytest.approx([0, 6])           # 500 owed + 100 for the next call
+
+
+def test_a_call_larger_than_a_minute_fails_at_once(clock):
+    limiter = Limiter(rpm=30, tpm=6_000)
     with pytest.raises(ValueError):
-        asyncio.run(limiter.acquire(1_001))
+        asyncio.run(limiter.acquire(6_001))
     assert clock.t == 0
 
 
@@ -119,7 +127,7 @@ def test_never_more_than_the_limit_in_any_rolling_minute(clock):
             starts.append((clock.t, size))
 
     async def main():
-        await asyncio.gather(caller(1_000), caller(700), caller(150))
+        await asyncio.gather(caller(1_000), caller(700), caller(150), caller(2_500))
 
     asyncio.run(main())
     for t, _ in starts:

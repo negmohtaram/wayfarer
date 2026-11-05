@@ -16,7 +16,8 @@ TIME_OF_DAY_WINDOWS = {
     "night": (21 * 60, 23 * 60),
     "any": (8 * 60, 21 * 60),
 }
-WALK_LIMIT_MIN = 20      # longer walks become transit
+WALK_LIMIT_MIN = 20      # longer walks become transit when transit is faster
+TRANSIT_WAIT_MIN = 10    # waiting at the stop, paid on every transit leg
 
 
 @dataclass
@@ -40,8 +41,9 @@ def time_day(ordered: list[Experience], persona: TravelerPersona) -> list[Slot]:
         travel, mode, walk_km = 0, "walk", 0.0
         if prev is not None:
             travel = travel_time_minutes(prev, exp, "walk")
-            if travel > WALK_LIMIT_MIN:
-                mode, travel = "transit", travel_time_minutes(prev, exp, "transit")
+            transit = travel_time_minutes(prev, exp, "transit") + TRANSIT_WAIT_MIN
+            if travel > WALK_LIMIT_MIN and transit < travel:
+                mode, travel = "transit", transit
             else:
                 walk_km = haversine(prev.location[0], prev.location[1], exp.location[0], exp.location[1])
         now += travel

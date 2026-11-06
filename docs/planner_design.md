@@ -97,6 +97,25 @@ A solver version is built if v2a misses a valid plan that exists, falls more tha
 
 Also reported: travel time, persona score, stops per day, model calls and revisions, each with a confidence interval, and every regression listed.
 
+## Results
+
+Run with `python -m src.evaluation.planner_compare` on the 56 scenarios. It needs no model calls, so the two planners see the same candidates and the difference has no model noise. Both planners are timed by `time_day()`, which counts a 10-minute wait at the stop on every transit leg.
+
+| Metric | Baseline | v2a | v2a minus baseline (95% CI) |
+|---|---|---|---|
+| valid plans | 52 of 56 | 56 of 56 | |
+| travel per scenario, waits included | 140.0 min | 91.1 min | −49.0 [−59.9, −38.5], better on 53, worse on 1 |
+| transit legs per scenario | 4.46 | 2.75 | −1.71 [−2.14, −1.27] |
+| walking per scenario | | | −0.09 km [−0.47, 0.27] |
+| persona score | | | −0.010 [−0.012, −0.007] |
+| slowest plan | 0.5 ms | 630 ms | |
+
+The baseline's four invalid plans break the daily or trip budget.
+
+In the first run of this benchmark, the wait was added only after planning. v2a saved 42 minutes on paper but used about three more transit legs than the baseline. Once the waits were added, the gain fell to 13 minutes and 25 scenarios were worse. The planner could not see the cost it was creating. Moving the wait into `time_day()` let the search pay for each transit leg, and v2a now takes fewer of them than the baseline.
+
+Against the bars above, valid plans and latency are met. The score bar (random restarts and the exact optimum on 1-day trips) was not measured, so the solver question stays open. The persona score drop is small, but it holds on 49 of 56 scenarios.
+
 ## Open questions
 
 - Opening hours: add `open` and `close` to the city data, or keep `best_time_of_day` as a soft window for now.

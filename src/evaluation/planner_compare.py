@@ -6,7 +6,9 @@ and revisions are left out on purpose: they decide nothing about which planner b
 
 Usage:
     python -m src.evaluation.planner_compare
-    python -m src.evaluation.planner_compare --a baseline --b v2a --transit-wait 10
+    python -m src.evaluation.planner_compare --a baseline --b v2a
+
+Travel times include the wait at the stop on every transit leg (TRANSIT_WAIT_MIN in planning/timing.py).
 """
 import argparse
 import asyncio
@@ -22,16 +24,17 @@ from src.evaluation.metrics import compute_soft_metrics
 from src.evaluation.scenarios.baseline_scenarios import ALL_SCENARIOS
 from src.evaluation.stats import cluster_bootstrap_ci
 from src.evaluation.validators import run_all_validators
+from src.planning.timing import TRANSIT_WAIT_MIN
 
 EVAL_DIR = Path("eval_results")
-METRICS = ["travel_min", "travel_min_with_wait", "walk_km", "transit_hops", "stops",
+METRICS = ["travel_min", "walk_km", "transit_hops", "stops",
            "travel_per_leg", "persona_fit", "planner_ms"]
 # Lower is better for these; higher is better for persona_fit and stops.
-LOWER_IS_BETTER = {"travel_min", "travel_min_with_wait", "walk_km", "transit_hops", "travel_per_leg",
+LOWER_IS_BETTER = {"travel_min", "walk_km", "transit_hops", "travel_per_leg",
                    "planner_ms"}
 
 
-async def plan_once(scenario, planner: str, transit_wait: int) -> dict:
+async def plan_once(scenario, planner: str) -> dict:
     """Candidate pool, one planner and the assembler for one scenario. Returns its row of metrics."""
     weather = scenario.injected_weather
     state = {"session_id": f"compare_{scenario.id}", "persona": scenario.persona, "log": [],
@@ -67,7 +70,6 @@ async def plan_once(scenario, planner: str, transit_wait: int) -> dict:
         "valid": not [c for c in hard_fails if c not in expected],
         "hard_fails": hard_fails,
         "travel_min": soft.total_travel_time_minutes,
-        "travel_min_with_wait": soft.total_travel_time_minutes + transit_wait * transit,
         "walk_km": soft.total_walking_km,
         "transit_hops": transit,
         "stops": sum(len(day.experiences) for day in itinerary.days),
@@ -91,15 +93,15 @@ def paired(rows_a: dict, rows_b: dict, metric: str) -> dict:
             "b_worse_ids": losses}
 
 
-async def compare(a: str, b: str, transit_wait: int) -> dict:
+async def compare(a: str, b: str) -> dict:
     scenarios = list(ALL_SCENARIOS)
     rows = {p: {} for p in (a, b)}
     for scenario in scenarios:
         for p in (a, b):
-            rows[p][scenario.id] = await plan_once(scenario, p, transit_wait)
+            rows[p][scenario.id] = await plan_once(scenario, p)
     solved = {p: {sid: r for sid, r in rows[p].items() if "error" not in r} for p in (a, b)}
     return {
-        "a": a, "b": b, "scenarios": len(scenarios), "transit_wait_min": transit_wait,
+        "a": a, "b": b, "scenarios": len(scenarios), "transit_wait_min": TRANSIT_WAIT_MIN,
         "valid": {p: sum(r["valid"] for r in solved[p].values()) for p in (a, b)},
         "errors": {p: {sid: r["error"] for sid, r in rows[p].items() if "error" in r} for p in (a, b)},
         "invalid": {p: {sid: r["hard_fails"] for sid, r in solved[p].items() if not r["valid"]} for p in (a, b)},
@@ -113,10 +115,9 @@ def main():
     parser = argparse.ArgumentParser(description="Paired planner comparison, no model calls")
     parser.add_argument("--a", default="baseline")
     parser.add_argument("--b", default="v2a")
-    parser.add_argument("--transit-wait", type=int, default=10, help="Minutes added per transit hop")
     args = parser.parse_args()
 
-    report = asyncio.run(compare(args.a, args.b, args.transit_wait))
+    report = asyncio.run(compare(args.a, args.b))
     print(f"{report['b']} vs {report['a']} on {report['scenarios']} scenarios (b minus a, 95% CI)")
     print(f"valid: {report['valid']}  errors: { {p: len(e) for p, e in report['errors'].items()} }")
     for m, r in report["paired"].items():

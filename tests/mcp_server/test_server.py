@@ -16,6 +16,8 @@ from src.chat.extract import Change, Op, Slot
 from tests.api.conftest import FakeModel
 from tests.api.test_chat_messages import PLAN, ChatModel
 from tests.api.test_plan_jobs import PERSONA
+from src.evaluation.chat_messages import CHAT_MESSAGES
+from src.evaluation.chat_messages_lisbon import LISBON_MESSAGES
 
 PERSONA_JSON = PERSONA.model_dump(mode="json")
 
@@ -200,3 +202,27 @@ def test_a_chat_message_returns_a_card_and_changes_nothing(wayfarer):
     assert body["card"]["summary"] == "Move Rijksmuseum from day 1 to day 2 (morning)"
     assert body["card"]["can_confirm"]
     assert unchanged                                          # proposed, not applied
+
+
+INJECTIONS = [text for text, _, _, tag in CHAT_MESSAGES + LISBON_MESSAGES if tag == "injection"]
+
+
+def test_no_injection_changes_the_plan_even_when_the_router_is_fooled(wayfarer):
+    """Worst case: every injection is routed as change_setting and the extractor asks for an unlimited budget."""
+    model = ChatModel([Change(op=Op.SETTING, setting="budget", value="unlimited")])
+
+    def setup(app):
+        app.state.jobs._plans["p1"] = PLAN
+        app.state.llm_factory = lambda temperature=0.7: model
+
+    async def run():
+        before = repr(PLAN)
+        async with wayfarer(setup=setup) as client:
+            replies = [await client.call_tool("send_chat_message", {"plan_id": "p1", "text": text})
+                       for text in INJECTIONS]
+        return replies, before == repr(PLAN)
+    replies, unchanged = asyncio.run(run())
+
+    assert len(INJECTIONS) == 14
+    assert unchanged                                    # a card is only a proposal
+    assert all(r.structured_content["intent"] == "change_setting" for r in replies)

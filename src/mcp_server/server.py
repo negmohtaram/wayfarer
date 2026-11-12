@@ -18,7 +18,9 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, Field
 
+from src.chat.card import ProposalCard
 from src.chat.extract import plan_outline
+from src.chat.router import Intent
 from src.evaluation.models import ValidationResult
 from src.jobs.models import JobStatus
 from src.models.persona import TravelerPersona
@@ -47,6 +49,12 @@ class PlanCheck(BaseModel):
     checks_run: list[str]
 
 
+class ChatReply(BaseModel):
+    intent: Intent
+    day: Optional[int] = None
+    card: Optional[ProposalCard] = None   # a proposal only; the traveler confirms it in the app
+
+
 def idempotency_key(persona: TravelerPersona, attempt: int) -> str:
     """Same persona and attempt, same key: a repeated call finds the first job instead of starting another."""
     body = json.dumps(persona.model_dump(mode="json"), sort_keys=True)
@@ -61,6 +69,14 @@ def _detail(resp: httpx.Response) -> str:
     return detail.get("message", str(detail)) if isinstance(detail, dict) else str(detail)
 
 
+def _upstream_status(resp: httpx.Response) -> Optional[int]:
+    try:
+        detail = resp.json().get("detail")
+    except ValueError:
+        return None
+    return detail.get("upstream_status") if isinstance(detail, dict) else None
+
+
 async def _request(http: httpx.AsyncClient, method: str, path: str, **kwargs: Any) -> dict:
     try:
         resp = await http.request(method, path, **kwargs)
@@ -73,6 +89,10 @@ async def _request(http: httpx.AsyncClient, method: str, path: str, **kwargs: An
     if resp.status_code == 422:
         raise ToolError(f"Rejected input: {_detail(resp)}")
     if resp.status_code == 503:
+        upstream = _upstream_status(resp)
+        if upstream in (401, 403):     # the provider refused us: waiting will not change the answer
+            raise ToolError(f"The planning model refused the request (status {upstream}). Retrying will not help; "
+                            "the server's model access needs fixing.")
         wait = resp.headers.get("Retry-After", "30")
         raise ToolError(f"The planning model is unavailable right now. Try again in {wait} seconds.")
     raise ToolError(f"Wayfarer API error {resp.status_code}.")
@@ -114,6 +134,16 @@ def build_server(http: httpx.AsyncClient) -> MCPServer:
         return PlanCheck(plan_id=report["plan_id"], passed=report["passed"],
                          failures=[r for r in results if not r.passed],
                          checks_run=sorted({r.code for r in results}))
+
+    @mcp.tool()
+    async def send_chat_message(
+        plan_id: Annotated[str, Field(description="Id from get_job_status")],
+        text: Annotated[str, Field(min_length=1, max_length=1000, description="The traveler's message, as written")],
+    ) -> ChatReply:
+        """Send a traveler's message about a saved plan. Returns what the message asks for and, for a change,
+        a proposal card with its effects and checks. Nothing is applied: the traveler confirms the card in the app."""
+        reply = await _request(http, "POST", f"/api/trips/{quote(plan_id, safe='')}/messages", json={"text": text})
+        return ChatReply(**reply)
 
     return mcp
 

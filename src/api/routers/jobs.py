@@ -1,9 +1,13 @@
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Request, Response
+from pydantic import BaseModel
 
 from src.config import PLAN_JOB_DEADLINE_S, SUPPORTED_CITIES
+from src.evaluation.models import EvaluationScenario, ValidationResult
+from src.evaluation.validators import passed_all_hard, run_all_validators
 from src.jobs.models import IdempotencyKeyReused, JobAccepted, JobView, PlanJobRequest
+from src.models.itinerary import Itinerary
 from src.models.persona import TravelerPersona
 
 router = APIRouter(tags=["jobs"])
@@ -47,3 +51,22 @@ async def get_plan(plan_id: str, request: Request):
     if plan is None:
         raise HTTPException(404, f"Plan {plan_id} not found")
     return plan
+
+
+class ValidationReport(BaseModel):
+    plan_id: str
+    passed: bool                     # no failed check with severity "error"
+    results: list[ValidationResult]
+
+
+@router.get("/plans/{plan_id}/validation", response_model=ValidationReport)
+async def validate_plan(plan_id: str, request: Request):
+    """Run the hard checks on a saved plan. Read-only: the same plan always gives the same report."""
+    plan = await request.app.state.jobs.get_plan(plan_id)
+    if plan is None:
+        raise HTTPException(404, f"Plan {plan_id} not found")
+    # The plan carries the persona it was made for, so the checks judge it against that traveler.
+    scenario = EvaluationScenario(id=plan_id, description="saved plan",
+                                  persona=TravelerPersona(**plan["persona"]))
+    results = run_all_validators(Itinerary(**plan["itinerary"]), scenario)
+    return ValidationReport(plan_id=plan_id, passed=passed_all_hard(results), results=results)

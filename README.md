@@ -54,6 +54,40 @@ If the page says the planning model can't be reached, the server is running but 
 
 Planning runs as a background job. `POST /api/plans` returns a job id and `GET /api/jobs/{id}` shows its progress. The interactive reference is at http://localhost:8000/docs. [docs/api.md](docs/api.md) explains how jobs behave and lists the error types.
 
+## MCP server
+
+The same features are available as tools over the Model Context Protocol. Any MCP client can plan a trip with them and work with the plan. The server is only a thin layer over the API, so start the API first and point the server at it with `WAYFARER_API_URL`.
+
+| Tool | What it does |
+|---|---|
+| `plan_trip` | Starts a planning job for a traveler profile and returns the job id at once. |
+| `get_job_status` | Reports the job's progress. When it is done, it adds the plan id and a short outline. |
+| `validate_itinerary` | Runs the hard checks on a saved plan and returns the failed ones. |
+| `send_chat_message` | Sends a traveler's message about a plan and returns the proposed change. |
+
+A chat message only produces a proposal card. Nothing changes until the traveler confirms the card in the app, and no tool can confirm it. Retries are safe. Calling `plan_trip` again with the same profile returns the same job, and after a failed job `attempt: 2` starts a new one.
+
+This opens the server in the MCP Inspector.
+
+```bash
+WAYFARER_API_URL=http://localhost:8000 npx @modelcontextprotocol/inspector venv/bin/python -m src.mcp_server.server
+```
+
+Desktop clients that read an `mcpServers` config take an entry like this one, with your own path.
+
+```json
+{
+  "mcpServers": {
+    "wayfarer": {
+      "command": "/path/to/wayfarer/venv/bin/python",
+      "args": ["-m", "src.mcp_server.server"],
+      "cwd": "/path/to/wayfarer",
+      "env": {"WAYFARER_API_URL": "http://localhost:8000"}
+    }
+  }
+}
+```
+
 ## Results
 
 The planner is measured on 56 fixed scenarios (personas, budgets, accessibility needs, weather, disruptions) with hard checks such as schedule overlaps and budgets, plus soft metrics. Every model and weather call is recorded, so any run can be replayed with no network. A run where a model call failed and a fallback planned instead is marked invalid and left out.
